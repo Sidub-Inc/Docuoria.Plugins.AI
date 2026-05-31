@@ -1,0 +1,413 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.sidub.net/docuoria/template-schema.json",
+  "title": "Sidub PDF Pipeline Template",
+  "description": "JSON Schema (Draft 2020-12) for the Sidub Docuoria Template document. Polymorphic nodes carry a `$kind` discriminator whose value matches the corresponding CLR simple type name. This schema constrains structure only; deeper semantic checks (field references, regex validity, record cycles) are enforced by Template.Validate() at runtime.",
+  "type": "object",
+  "required": ["identifier", "rootMatchRule", "dataModel", "extractionStep", "publishStep"],
+  "properties": {
+    "identifier": { "type": "string", "minLength": 1 },
+    "rootMatchRule": { "$ref": "#/$defs/MatchRuleConfigurationBase" },
+    "dataModel": { "$ref": "#/$defs/DataModel" },
+    "extractionStep": { "$ref": "#/$defs/ExtractionStep" },
+    "intermediateSteps": {
+      "type": "array",
+      "items": { "type": "object" }
+    },
+    "publishStep": { "$ref": "#/$defs/PublishStep" }
+  },
+  "additionalProperties": true,
+  "$defs": {
+    "MatchRuleConfigurationBase": {
+      "oneOf": [
+        { "$ref": "#/$defs/FileNameMatchRule" },
+        { "$ref": "#/$defs/TextPatternMatchRule" },
+        { "$ref": "#/$defs/TextAnchorMatchRule" },
+        { "$ref": "#/$defs/MetadataMatchRule" },
+        { "$ref": "#/$defs/PageGeometryMatchRule" },
+        { "$ref": "#/$defs/TableMatchRule" },
+        { "$ref": "#/$defs/CompositeMatchRule" }
+      ]
+    },
+    "FileNameMatchRule": {
+      "type": "object",
+      "required": ["$kind", "pattern"],
+      "properties": {
+        "$kind": { "const": "FileNameMatchRule" },
+        "pattern": { "type": "string" },
+        "mode": { "type": "integer", "minimum": 0, "maximum": 1, "description": "0=Glob, 1=Regex" },
+        "caseSensitive": { "type": "boolean" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "TextPatternMatchRule": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": {
+        "$kind": { "const": "TextPatternMatchRule" },
+        "tokens": { "type": "array", "items": { "type": "string" } },
+        "regexPattern": { "type": "string" },
+        "mode": { "type": "integer", "minimum": 0, "maximum": 1, "description": "0=AnyToken, 1=AllTokens" },
+        "caseSensitive": { "type": "boolean" },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "TextAnchorMatchRule": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": {
+        "$kind": { "const": "TextAnchorMatchRule" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "MetadataMatchRule": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": {
+        "$kind": { "const": "MetadataMatchRule" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "PageGeometryMatchRule": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": {
+        "$kind": { "const": "PageGeometryMatchRule" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "TableMatchRule": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": {
+        "$kind": { "const": "TableMatchRule" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "CompositeMatchRule": {
+      "type": "object",
+      "required": ["$kind", "children"],
+      "properties": {
+        "$kind": { "const": "CompositeMatchRule" },
+        "operator": { "type": "integer", "minimum": 0, "maximum": 2, "description": "0=And, 1=Or, 2=Not" },
+        "children": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/CompositeChildEntry" },
+          "minItems": 1
+        },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "CompositeChildEntry": {
+      "type": "object",
+      "required": ["rule"],
+      "properties": {
+        "rule": { "$ref": "#/$defs/MatchRuleConfigurationBase" },
+        "weight": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    "DataModel": {
+      "type": "object",
+      "required": ["schema"],
+      "properties": {
+        "schema": { "$ref": "#/$defs/RecordDefinition" }
+      },
+      "additionalProperties": true
+    },
+    "RecordDefinition": {
+      "type": "object",
+      "required": ["name", "fields"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FieldDefinition" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "FieldDefinition": {
+      "oneOf": [
+        { "$ref": "#/$defs/PrimitiveFieldDefinition" },
+        { "$ref": "#/$defs/RecordFieldDefinition" }
+      ]
+    },
+    "PrimitiveFieldDefinition": {
+      "type": "object",
+      "required": ["$kind", "name"],
+      "properties": {
+        "$kind": { "const": "PrimitiveFieldDefinition" },
+        "name": { "type": "string", "minLength": 1 },
+        "fieldType": { "type": "integer", "minimum": 0, "maximum": 5, "description": "0=String, 1=Number, 2=Integer, 3=Boolean, 4=Date, 5=Timestamp" },
+        "isRequired": { "type": "boolean" },
+        "isCollection": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "RecordFieldDefinition": {
+      "type": "object",
+      "required": ["$kind", "name"],
+      "properties": {
+        "$kind": { "const": "RecordFieldDefinition" },
+        "name": { "type": "string", "minLength": 1 },
+        "isRequired": { "type": "boolean" },
+        "isCollection": { "type": "boolean" },
+        "record": { "$ref": "#/$defs/RecordDefinition" }
+      },
+      "additionalProperties": true
+    },
+    "ExtractionStep": {
+      "type": "object",
+      "properties": {
+        "configuration": { "type": "object" },
+        "mappings": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              { "$ref": "#/$defs/FieldMapping" },
+              { "$ref": "#/$defs/RepeatingFieldMapping" }
+            ]
+          }
+        }
+      },
+      "additionalProperties": true
+    },
+    "FieldMapping": {
+      "type": "object",
+      "required": ["$kind", "fieldName", "fieldType", "source"],
+      "properties": {
+        "$kind": { "const": "FieldMapping" },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "fieldType": { "type": "integer", "minimum": 0, "maximum": 5, "description": "0=String, 1=Number, 2=Integer, 3=Boolean, 4=Date, 5=Timestamp" },
+        "source": { "$ref": "#/$defs/ExtractionSource" },
+        "parseFormat": { "type": ["string", "null"] },
+        "cultureName": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "RepeatingFieldMapping": {
+      "type": "object",
+      "required": ["$kind", "collectionFieldName", "elementDefinition", "source", "subFields"],
+      "properties": {
+        "$kind": { "const": "RepeatingFieldMapping" },
+        "collectionFieldName": { "type": "string", "minLength": 1 },
+        "elementDefinition": { "$ref": "#/$defs/RecordDefinition" },
+        "source": { "$ref": "#/$defs/ExtractionSource" },
+        "subFields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SubFieldMapping" }
+        }
+      },
+      "additionalProperties": true
+    },
+    "ExtractionSource": {
+      "oneOf": [
+        { "$ref": "#/$defs/TextPatternExtractionSource" },
+        { "$ref": "#/$defs/TextAnchorExtractionSource" },
+        { "$ref": "#/$defs/TableCellExtractionSource" },
+        { "$ref": "#/$defs/TableRowsExtractionSource" },
+        { "$ref": "#/$defs/MetadataFieldExtractionSource" },
+        { "$ref": "#/$defs/FallbackExtractionSource" }
+      ]
+    },
+    "TextPatternExtractionSource": {
+      "type": "object",
+      "required": ["$kind", "mode"],
+      "properties": {
+        "$kind": { "const": "TextPatternExtractionSource" },
+        "mode": { "type": "string", "enum": ["Token", "Pattern", "AllMatches"] },
+        "literalToken": { "type": "string" },
+        "regexPattern": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "caseSensitive": { "type": "boolean" },
+        "blockSeparator": { "type": "string" },
+        "startAnchorPattern": { "type": ["string", "null"] },
+        "endAnchorPattern": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    },
+    "TextAnchorExtractionSource": {
+      "type": "object",
+      "required": ["$kind", "region"],
+      "properties": {
+        "$kind": { "const": "TextAnchorExtractionSource" },
+        "region": { "$ref": "#/$defs/PdfBounds" },
+        "literalToken": { "type": "string" },
+        "regexPattern": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "caseSensitive": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "PdfBounds": {
+      "type": "object",
+      "required": ["left", "top", "width", "height"],
+      "properties": {
+        "left": { "type": "number" },
+        "top": { "type": "number" },
+        "width": { "type": "number" },
+        "height": { "type": "number" }
+      },
+      "additionalProperties": true
+    },
+    "TableCellExtractionSource": {
+      "type": "object",
+      "required": ["$kind", "rowIndex"],
+      "properties": {
+        "$kind": { "const": "TableCellExtractionSource" },
+        "rowIndex": { "type": "integer", "minimum": 0 },
+        "columnIndex": { "type": "integer", "minimum": 0 },
+        "headerToken": { "type": "string" },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "tableIndex": { "type": "integer", "minimum": 0 },
+        "caseSensitiveHeader": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "TableRowsExtractionSource": {
+      "type": "object",
+      "required": ["$kind", "mode"],
+      "properties": {
+        "$kind": { "const": "TableRowsExtractionSource" },
+        "mode": { "type": "string", "enum": ["ByHeader", "Ordinal"] },
+        "pageNumber": { "type": "integer", "minimum": 1 },
+        "tableIndex": { "type": "integer", "minimum": 0 },
+        "headerRowIndex": { "type": "integer", "minimum": 0 },
+        "skipRows": { "type": "integer", "minimum": 0 },
+        "caseSensitiveHeader": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "MetadataFieldExtractionSource": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": {
+        "$kind": { "const": "MetadataFieldExtractionSource" },
+        "standardField": { "type": "string", "enum": ["Title", "Author", "Subject", "Keywords", "Creator", "Producer", "CreationDate", "ModifiedDate"] },
+        "rawKey": { "type": "string" }
+      },
+      "additionalProperties": true
+    },
+    "FallbackExtractionSource": {
+      "type": "object",
+      "required": ["$kind", "primary", "fallback"],
+      "properties": {
+        "$kind": { "const": "FallbackExtractionSource" },
+        "primary": { "$ref": "#/$defs/ExtractionSource" },
+        "fallback": { "$ref": "#/$defs/ExtractionSource" }
+      },
+      "additionalProperties": true
+    },
+    "SubFieldMapping": {
+      "oneOf": [
+        { "$ref": "#/$defs/HeaderSubFieldMapping" },
+        { "$ref": "#/$defs/OrdinalSubFieldMapping" },
+        { "$ref": "#/$defs/RegexGroupSubFieldMapping" },
+        { "$ref": "#/$defs/NamedGroupSubFieldMapping" }
+      ]
+    },
+    "HeaderSubFieldMapping": {
+      "type": "object",
+      "required": ["$kind", "fieldName"],
+      "properties": {
+        "$kind": { "const": "HeaderSubFieldMapping" },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "headerToken": { "type": "string" },
+        "caseSensitive": { "type": "boolean" }
+      },
+      "additionalProperties": true
+    },
+    "OrdinalSubFieldMapping": {
+      "type": "object",
+      "required": ["$kind", "fieldName"],
+      "properties": {
+        "$kind": { "const": "OrdinalSubFieldMapping" },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "columnIndex": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": true
+    },
+    "RegexGroupSubFieldMapping": {
+      "type": "object",
+      "required": ["$kind", "fieldName"],
+      "properties": {
+        "$kind": { "const": "RegexGroupSubFieldMapping" },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "groupIndex": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": true
+    },
+    "NamedGroupSubFieldMapping": {
+      "type": "object",
+      "required": ["$kind", "fieldName"],
+      "properties": {
+        "$kind": { "const": "NamedGroupSubFieldMapping" },
+        "fieldName": { "type": "string", "minLength": 1 },
+        "groupName": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": true
+    },
+    "FieldTransform": {
+      "oneOf": [
+        { "$ref": "#/$defs/TrimTransform" },
+        { "$ref": "#/$defs/CastTransform" },
+        { "$ref": "#/$defs/FormatTransform" },
+        { "$ref": "#/$defs/RenameTransform" },
+        { "$ref": "#/$defs/ComputeTransform" },
+        { "$ref": "#/$defs/CollectionElementTransform" }
+      ]
+    },
+    "TrimTransform": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": { "$kind": { "const": "TrimTransform" } },
+      "additionalProperties": true
+    },
+    "CastTransform": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": { "$kind": { "const": "CastTransform" } },
+      "additionalProperties": true
+    },
+    "FormatTransform": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": { "$kind": { "const": "FormatTransform" } },
+      "additionalProperties": true
+    },
+    "RenameTransform": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": { "$kind": { "const": "RenameTransform" } },
+      "additionalProperties": true
+    },
+    "ComputeTransform": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": { "$kind": { "const": "ComputeTransform" } },
+      "additionalProperties": true
+    },
+    "CollectionElementTransform": {
+      "type": "object",
+      "required": ["$kind"],
+      "properties": { "$kind": { "const": "CollectionElementTransform" } },
+      "additionalProperties": true
+    },
+    "PublishStep": {
+      "type": "object",
+      "properties": {
+        "configuration": { "type": "object" }
+      },
+      "additionalProperties": true
+    }
+  }
+}

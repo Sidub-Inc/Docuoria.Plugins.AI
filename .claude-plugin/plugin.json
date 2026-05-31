@@ -1,0 +1,21 @@
+{
+  "name": "docuoria",
+  "displayName": "Sidub Docuoria",
+  "version": "1.0.7",
+  "description": "Extract structured data from PDFs using template-driven pipelines. Author, classify, inspect, test, and execute extraction templates with a dotnet-script CLI surface.",
+  "author": {
+    "name": "Sidub Inc.",
+    "url": "https://github.com/Sidub-Inc"
+  },
+  "homepage": "https://github.com/Sidub-Inc/Docuoria",
+  "repository": "https://github.com/Sidub-Inc/Docuoria",
+  "license": "MIT",
+  "keywords": [
+    "pdf",
+    "extraction",
+    "pipeline",
+    "template",
+    "classification",
+    "dotnet-script"
+  ]
+}
