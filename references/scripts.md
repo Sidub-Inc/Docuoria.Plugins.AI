@@ -44,14 +44,18 @@ dotnet script scripts/<name>.csx -- --pdf path\to\file.pdf
 The `--` separator forwards subsequent tokens as script arguments (exposed as the
 `Args` global, an `IList<string>`).
 
-## Environment Variables
+## Common Store Parameters
 
-| Variable                       | Default      | Used by              | Description                                                                                                                  |
-| ------------------------------ | ------------ | -------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| `DOCUORIA_STORE`            | `local`      | store-backed scripts | `local` → file-system store; `api` → HTTP API store (`AddApiTemplateStore`).                                                 |
-| `DOCUORIA_STORE_LOCAL_PATH` | `./templates`| `local` store        | Filesystem directory holding `*.json` template files.                                                                        |
-| `DOCUORIA_STORE_API_URL`    | _(required)_ | `api` store          | Base URL of the templates HTTP API.                                                                                          |
-| `DOCUORIA_STORE_API_KEY`    | _(optional)_ | `api` store          | Function key sent as `x-functions-key`. Maps to `ApiTemplateStoreCredentials.FunctionKey`.                                   |
+Scripts that access the template store (`classify`, `evaluate-match`,
+`list-templates`, `load-template`, `save-template`) accept these shared flags
+to configure the store backend. When neither `--store-path` nor `--store-url`
+is provided, the local store defaults to `./templates`.
+
+| Flag           | Default        | Description                                                              |
+| -------------- | -------------- | ------------------------------------------------------------------------ |
+| `--store-path` | `./templates`  | Local file-system template store directory.                              |
+| `--store-url`  | _(none)_       | API template store URL (mutually exclusive with `--store-path`).         |
+| `--store-key`  | _(none)_       | Function key for API store authentication (used with `--store-url`).     |
 
 ## Error JSON Shape
 
@@ -101,7 +105,8 @@ it matched, with the captured value(s).
 | -------------------- | -------- | ---------------------------------------------------------- |
 | `--pattern`          | yes      | Inline pattern source (regex or DSL block).                |
 | `--pdf`              | yes      | Path to the source PDF.                                    |
-| `--block-separator`  | no       | Override the block-separator regex used during extraction. |
+| `--page`             | no       | 1-based page index (default: all pages).                   |
+| `--block-separator`  | no       | Override the block-separator regex used during extraction.  |
 
 **Output schema.** `{ hasMatches: bool, matches: [...] }`.
 
@@ -120,10 +125,11 @@ dotnet script scripts/test-pattern.csx -- --pattern 'Invoice #(\d+)' --pdf invoi
 **Synopsis.** Evaluate a multi-group pattern and emit each named capture group's
 match set — used when authoring repeating-row extractions.
 
-| Arg         | Required | Description                  |
-| ----------- | -------- | ---------------------------- |
-| `--pattern` | yes      | Multi-group pattern source.  |
-| `--pdf`     | yes      | Path to the source PDF.      |
+| Arg         | Required | Description                                  |
+| ----------- | -------- | -------------------------------------------- |
+| `--pattern` | yes      | Multi-group pattern source.                  |
+| `--pdf`     | yes      | Path to the source PDF.                      |
+| `--page`    | no       | 1-based page index (default: all pages).     |
 
 **Output schema.** `{ groups: { <name>: [matches...] } }`.
 
@@ -161,14 +167,17 @@ dotnet script scripts/validate-template.csx -- --template templates/invoice.json
 ## dry-run.csx
 
 **Synopsis.** Execute extraction + publish steps against a PDF **without** producing a
-serialized output payload — useful for end-to-end pipeline validation.
+serialized output payload — useful for end-to-end pipeline validation. Optionally
+preview formatted output with `--preview-as`.
 
-| Arg          | Required | Description                       |
-| ------------ | -------- | --------------------------------- |
-| `--pdf`      | yes      | Path to the source PDF.           |
-| `--template` | yes      | Path to the template JSON file.   |
+| Arg            | Required | Description                                                |
+| -------------- | -------- | ---------------------------------------------------------- |
+| `--pdf`        | yes      | Path to the source PDF.                                    |
+| `--template`   | yes      | Path to the template JSON file.                            |
+| `--preview-as` | no       | Preview formatted output: `csv` or `json` (no file written). |
 
 **Output schema.** `{ kind: "SucceededResult"|"FailedResult"|"RejectedResult", result }`.
+With `--preview-as`: `{ kind, format, preview }`.
 
 **Exit codes.** `0` success · `1` unhandled.
 
@@ -212,10 +221,13 @@ template. Confidence is `ruleConfidence × extractionProbeScore` (0.0 when eithe
 fails, 1.0 when both are perfect). Template argument may be a file path **or** a
 template identifier resolved through the configured store.
 
-| Arg          | Required | Description                                                                       |
-| ------------ | -------- | --------------------------------------------------------------------------------- |
-| `--pdf`      | yes      | Path to the source PDF.                                                           |
-| `--template` | yes      | File path (`.json` / contains path separator) **or** template ID for store lookup. |
+| Arg            | Required | Description                                                                       |
+| -------------- | -------- | --------------------------------------------------------------------------------- |
+| `--pdf`        | yes      | Path to the source PDF.                                                           |
+| `--template`   | yes      | File path (`.json` / contains path separator) **or** template ID for store lookup. |
+| `--store-path` | no       | Local template store directory (default: `./templates`).                          |
+| `--store-url`  | no       | API template store URL.                                                           |
+| `--store-key`  | no       | Function key for API store authentication.                                        |
 
 **Output schema.** `{ confidence, matchedRules }`.
 
@@ -234,10 +246,13 @@ dotnet script scripts/evaluate-match.csx -- --pdf invoice.pdf --template invoice
 **Synopsis.** Run ranked classification across **all** registered templates and return
 the top matches sorted by confidence (descending).
 
-| Arg     | Required | Description                                       |
-| ------- | -------- | ------------------------------------------------- |
-| `--pdf` | yes      | Path to the source PDF.                           |
-| `--top` | no       | Maximum number of results to return (default: 5). |
+| Arg            | Required | Description                                       |
+| -------------- | -------- | ------------------------------------------------- |
+| `--pdf`        | yes      | Path to the source PDF.                           |
+| `--top`        | no       | Maximum number of results to return (default: 5). |
+| `--store-path` | no       | Local template store directory (default: `./templates`). |
+| `--store-url`  | no       | API template store URL.                           |
+| `--store-key`  | no       | Function key for API store authentication.        |
 
 **Output schema.** `{ matches: [{ templateId, confidence }, ...] }`. Only functional
 matches are included (root rule passes AND extraction probe > 0).
@@ -257,7 +272,11 @@ dotnet script scripts/classify.csx -- --pdf invoice.pdf
 
 **Synopsis.** Enumerate template identifiers from the configured store.
 
-**Args.** _(none)_
+| Arg            | Required | Description                                              |
+| -------------- | -------- | -------------------------------------------------------- |
+| `--store-path` | no       | Local template store directory (default: `./templates`). |
+| `--store-url`  | no       | API template store URL.                                  |
+| `--store-key`  | no       | Function key for API store authentication.               |
 
 **Output schema.** `{ templates: [id, ...] }`.
 
@@ -266,8 +285,7 @@ dotnet script scripts/classify.csx -- --pdf invoice.pdf
 **Example.**
 
 ```powershell
-$env:DOCUORIA_STORE_LOCAL_PATH = "./templates"
-dotnet script scripts/list-templates.csx
+dotnet script scripts/list-templates.csx -- --store-path ./templates
 ```
 
 ---
@@ -276,10 +294,13 @@ dotnet script scripts/list-templates.csx
 
 **Synopsis.** Resolve a template by identifier and emit its JSON representation.
 
-| Arg        | Required | Description                                                              |
-| ---------- | -------- | ------------------------------------------------------------------------ |
-| `--id`     | yes      | Template identifier.                                                     |
-| `--output` | no       | Write JSON to this file path instead of stdout.                          |
+| Arg            | Required | Description                                              |
+| -------------- | -------- | -------------------------------------------------------- |
+| `--id`         | yes      | Template identifier.                                     |
+| `--output`     | no       | Write JSON to this file path instead of stdout.          |
+| `--store-path` | no       | Local template store directory (default: `./templates`). |
+| `--store-url`  | no       | API template store URL.                                  |
+| `--store-key`  | no       | Function key for API store authentication.               |
 
 **Output schema.** Without `--output`: full template JSON. With `--output`:
 `{ status: "ok", path }`.
@@ -299,19 +320,22 @@ dotnet script scripts/load-template.csx -- --id invoice --output templates/invoi
 **Synopsis.** Persist a template JSON file to the configured store. Fails with
 `already-exists` unless `--overwrite` is supplied.
 
-| Arg           | Required | Description                                                                 |
-| ------------- | -------- | --------------------------------------------------------------------------- |
-| `--file`      | yes      | Path to the template JSON file to persist.                                  |
-| `--overwrite` | no       | Boolean switch — overwrite an existing template with the same identifier.   |
+| Arg            | Required | Description                                                               |
+| -------------- | -------- | ------------------------------------------------------------------------- |
+| `--template`   | yes      | Path to the template JSON file to persist.                                |
+| `--overwrite`  | no       | Boolean switch — overwrite an existing template with the same identifier. |
+| `--store-path` | no       | Local template store directory (default: `./templates`).                  |
+| `--store-url`  | no       | API template store URL.                                                   |
+| `--store-key`  | no       | Function key for API store authentication.                                |
 
-**Output schema.** `{ status: "saved", id }`.
+**Output schema.** `{ status: "ok", identifier }`.
 
 **Exit codes.** `0` success · `1` `already-exists` / parse-error / unhandled.
 
 **Example.**
 
 ```powershell
-dotnet script scripts/save-template.csx -- --file templates/invoice.json --overwrite
+dotnet script scripts/save-template.csx -- --template templates/invoice.json --overwrite
 ```
 
 ---
@@ -327,8 +351,8 @@ dotnet script scripts/save-template.csx -- --file templates/invoice.json --overw
    `Args` to avoid shadowing the `dotnet-script` global of the same name).
 3. Builds a Generic Host via `ScriptHost.CreateHost(args, includeStore: bool)` which
    wires `AddDocuoriaEngine`, `AddBuiltInMatchRules`, the CSV/JSON output
-   generators, and (optionally) the template store selected by
-   `DOCUORIA_STORE`.
+   generators, and (optionally) the template store selected by the `--store-path` /
+   `--store-url` / `--store-key` flags.
 4. Provides `JsonOut.Write` / `JsonOut.Error` writers backed by
    `DocuoriaJsonOptions.Default` and a `LoadPdf(path)` helper that exits with
    `pdf-not-found` when the input is missing.

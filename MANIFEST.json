@@ -1,21 +1,21 @@
 {
   "package": "docuoria",
-  "version": "1.0.7",
-  "builtAt": "2026-05-31T22:25:27.0125769Z",
+  "version": "1.0.8",
+  "builtAt": "2026-06-01T00:18:08.4446321Z",
   "sdk": {
     "assembly": "Docuoria.dll",
-    "fileVersion": "1.0.7.0",
-    "informationalVersion": "1.0.7+Branch.main.Sha.7c3d355ef8f2724f901aa4807b1b323268129081.7c3d355ef8f2724f901aa4807b1b323268129081"
+    "fileVersion": "1.0.8.0",
+    "informationalVersion": "1.0.8+Branch.main.Sha.52338b859083a2478ace6b033a8adf0f2051cf1a.52338b859083a2478ace6b033a8adf0f2051cf1a"
   },
   "files": [
     {
       "path": ".claude-plugin/plugin.json",
-      "sha256": "e24530694e3e7f2ff54e6ef0ee53d5c4dec5460632f3644aaf4ecedbe3a3518b",
+      "sha256": "0704ebc68216da325266773202d01671ce367a49e16999b3bf3969fcbb2917cd",
       "bytes": 631
     },
     {
       "path": "assets/lib/Docuoria.dll",
-      "sha256": "2c92c5ad0150478cc867b2fa81517d7f5666f0636a65b5c055a81db4dec90597",
+      "sha256": "5c149b578ba25380bcc093826e3449ab4b423ac4eafa095898de252fea89ee7e",
       "bytes": 287744
     },
     {
@@ -50,8 +50,8 @@
     },
     {
       "path": "references/failure-tree.md",
-      "sha256": "973f7c00ee6640c4ab584ea890f017d037e6c7a81cc984dd9920be33affe6046",
-      "bytes": 15740
+      "sha256": "cbd03b07014c5408e0ddb248d3bd7572cb7c7920f35ea58d4ab89e4da8840e6c",
+      "bytes": 15828
     },
     {
       "path": "references/pattern-authoring.md",
@@ -70,8 +70,8 @@
     },
     {
       "path": "references/scripts.md",
-      "sha256": "c8cc186490087effaf952966fd486904a18834e144a03fd9958449d651622dd7",
-      "bytes": 13291
+      "sha256": "7b6a35582c789b6a24678139e11fc58e3670507a4d3532108d37832068a73827",
+      "bytes": 15127
     },
     {
       "path": "references/template-reference.md",
@@ -85,13 +85,13 @@
     },
     {
       "path": "scripts/_common.csx",
-      "sha256": "2b5c39faf00f2b0fc8489734321437ba36b877c3fe4494e524a0ea76036bcadb",
-      "bytes": 10981
+      "sha256": "65eeea7c7f3b9383804bab2d4c8a4d204afa873f94c013d8a06181bf01fc07c5",
+      "bytes": 10518
     },
     {
       "path": "scripts/classify.csx",
-      "sha256": "a15a2c508a4aa940de440499422ab2686db6fcdbb1a765e8cc482d6387eb8263",
-      "bytes": 1947
+      "sha256": "386bdae4c07f4b8a6305c7e2d77dda236fe36079ab618cc9811a1593f49b605a",
+      "bytes": 2229
     },
     {
       "path": "scripts/dry-run.csx",
@@ -100,8 +100,8 @@
     },
     {
       "path": "scripts/evaluate-match.csx",
-      "sha256": "31a411e2293913a4999c10e1f82b9bd113ba6dcd70e0560f3f3abfa0268f4679",
-      "bytes": 2445
+      "sha256": "3157aa515d648b913a829b069a8187e4979a6204518e164c79c60610e625ef83",
+      "bytes": 2727
     },
     {
       "path": "scripts/execute.csx",
@@ -115,18 +115,18 @@
     },
     {
       "path": "scripts/list-templates.csx",
-      "sha256": "f678b9110d23dfcc85b9c1b872f706f4fbb9c535464dc2c903040e20575178ad",
-      "bytes": 896
+      "sha256": "6c89fd1646fc8408bbc7c8dad3f44deed8e01ba8d58baaa7b8fe32c23f2f1028",
+      "bytes": 1136
     },
     {
       "path": "scripts/load-template.csx",
-      "sha256": "9318b4cdf5b2cc04e2b0f2ae56f79a5bc613310bd60695a8b929e54b38bb55cf",
-      "bytes": 1730
+      "sha256": "5dc873ed53176370a70b59091f45b7eeda86f085f6f635421d0e407b37d684f0",
+      "bytes": 1970
     },
     {
       "path": "scripts/save-template.csx",
-      "sha256": "1977839bf7935eb9535c01e37d89880abf01669b22e16139889b54c7c3bb7f24",
-      "bytes": 1836
+      "sha256": "f4f9ff50b33a1f69e5f78af7c2122eb47fe3f84274e06831e56ac41be72cbed6",
+      "bytes": 1936
     },
     {
       "path": "scripts/schema-info.csx",

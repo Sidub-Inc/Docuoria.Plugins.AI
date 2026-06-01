@@ -3,7 +3,7 @@
 #nullable enable
 
 // SCR-10 — persist a template JSON file to the configured store.
-// Args: --template <path> [--overwrite]  (also accepts --file as alias)
+// Args: --template <path> [--overwrite] [--store-path <dir>] [--store-url <url>] [--store-key <key>]
 // stdout: { status, identifier }.
 
 using Docuoria.Models;
@@ -14,13 +14,12 @@ try
 {
     Cli.Help(Args, "save-template.csx", "Persist a template JSON file to the configured store",
         ("template", true, "Path to the template JSON file", false),
-        ("overwrite", false, "Overwrite if template already exists", true));
+        ("overwrite", false, "Overwrite if template already exists", true),
+        ("store-path", false, "Local template store directory (default: ./templates)", false),
+        ("store-url", false, "API template store URL (mutually exclusive with --store-path)", false),
+        ("store-key", false, "Function key for API store authentication", false));
 
-    var filePath = Cli.Get(Args, "template") ?? Cli.Get(Args, "file");
-    if (filePath is null)
-    {
-        JsonOut.Error("missing-arg", "--template is required (path to the template JSON file)", null, 2);
-    }
+    var filePath = Cli.Require(Args, "template");
     var overwrite = Cli.Has(Args, "overwrite");
 
     if (!File.Exists(filePath))
@@ -32,7 +31,7 @@ try
     var store = ScriptHost.GetStore(host);
     if (store is null)
     {
-        JsonOut.Error("no-store", "ITemplateStoreProvider is not registered. Set the DOCUORIA_STORE_LOCAL_PATH environment variable to a directory path to enable the local template store.", null, 1);
+        JsonOut.Error("no-store", "ITemplateStoreProvider is not registered. Pass --store-path <dir> to specify a local template store directory.", null, 1);
     }
 
     var tpl = Template.FromJson(File.ReadAllText(filePath));

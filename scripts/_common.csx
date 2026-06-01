@@ -10,7 +10,7 @@
 #nullable enable
 
 // Phase 29: Shared bootstrap for every script under `scripts/` (D-Area-2 in 29-CONTEXT.md).
-// Every script `#load`s this file. It deduplicates DI wiring, env-var handling, arg parsing,
+// Every script `#load`s this file. It deduplicates DI wiring, arg parsing,
 // and JSON I/O so individual scripts can focus on their semantics.
 //
 // The `dotnet-script` runtime is required to execute these scripts:
@@ -63,7 +63,7 @@ public static class ScriptHost
     /// <param name="args">Forwarded to Host.CreateDefaultBuilder for configuration binding.</param>
     /// <param name="includeStore">When false, ITemplateStoreProvider is NOT registered — used by
     /// scripts that don't touch the store (inspect, test-pattern, test-groups, validate-template,
-    /// dry-run) to avoid forcing env-var configuration on irrelevant invocations.</param>
+    /// dry-run) to avoid forcing store configuration on irrelevant invocations.</param>
     public static IHost CreateHost(string[] args, bool includeStore = true)
     {
         var builder = Host.CreateDefaultBuilder(args);
@@ -75,7 +75,7 @@ public static class ScriptHost
                 b.AddCsvOutputGenerator();
                 b.AddJsonOutputGenerator();
                 if (includeStore)
-                    RegisterStore(b);
+                    RegisterStore(b, args);
             });
         });
         return builder.Build();
@@ -87,39 +87,30 @@ public static class ScriptHost
     public static ITemplateStoreProvider? GetStore(IHost host)
         => host.Services.GetService<ITemplateStoreProvider>();
 
-    private static void RegisterStore(IDocuoriaEngineBuilder builder)
+    private static void RegisterStore(IDocuoriaEngineBuilder builder, string[] args)
     {
-        var kind = Environment.GetEnvironmentVariable("DOCUORIA_STORE");
-        if (string.IsNullOrWhiteSpace(kind))
-            kind = "local";
+        var storePath = Cli.Get(args, "store-path");
+        var storeUrl = Cli.Get(args, "store-url");
+        var storeKey = Cli.Get(args, "store-key");
 
-        switch (kind.Trim().ToLowerInvariant())
+        if (!string.IsNullOrWhiteSpace(storePath) && !string.IsNullOrWhiteSpace(storeUrl))
         {
-            case "local":
-            {
-                var path = Environment.GetEnvironmentVariable("DOCUORIA_STORE_LOCAL_PATH");
-                if (string.IsNullOrWhiteSpace(path))
-                    path = "./templates";
-                // IN-01: directory is created lazily by LocalFileTemplateStoreProvider on first
-                // write; ListAsync tolerates a missing root. Avoid littering arbitrary cwds with
-                // an empty ./templates dir at script startup.
-                builder.AddLocalTemplateStore(path!);
-                break;
-            }
-            case "api":
-            {
-                var url = Environment.GetEnvironmentVariable("DOCUORIA_STORE_API_URL");
-                if (string.IsNullOrWhiteSpace(url))
-                    throw new InvalidOperationException(
-                        "DOCUORIA_STORE_API_URL is required when DOCUORIA_STORE='api'.");
-                var key = Environment.GetEnvironmentVariable("DOCUORIA_STORE_API_KEY");
-                var creds = new ApiTemplateStoreCredentials { FunctionKey = key };
-                builder.AddApiTemplateStore(new Uri(url!), creds);
-                break;
-            }
-            default:
-                throw new InvalidOperationException(
-                    $"Unknown DOCUORIA_STORE value '{kind}'. Expected 'local' or 'api'.");
+            throw new InvalidOperationException(
+                "--store-path and --store-url are mutually exclusive. Use --store-path for a local file store or --store-url for an API store.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(storeUrl))
+        {
+            var creds = new ApiTemplateStoreCredentials { FunctionKey = storeKey };
+            builder.AddApiTemplateStore(new Uri(storeUrl), creds);
+        }
+        else
+        {
+            // IN-01: directory is created lazily by LocalFileTemplateStoreProvider on first
+            // write; ListAsync tolerates a missing root. Avoid littering arbitrary cwds with
+            // an empty ./templates dir at script startup.
+            var path = string.IsNullOrWhiteSpace(storePath) ? "./templates" : storePath;
+            builder.AddLocalTemplateStore(path);
         }
     }
 }

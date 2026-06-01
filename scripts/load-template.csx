@@ -14,7 +14,10 @@ try
 {
     Cli.Help(Args, "load-template.csx", "Fetch a template by ID and emit its JSON",
         ("id", true, "Template identifier", false),
-        ("output", false, "Write template JSON to this file path", false));
+        ("output", false, "Write template JSON to this file path", false),
+        ("store-path", false, "Local template store directory (default: ./templates)", false),
+        ("store-url", false, "API template store URL (mutually exclusive with --store-path)", false),
+        ("store-key", false, "Function key for API store authentication", false));
 
     var id = Cli.Require(Args, "id");
     var outputPath = Cli.Get(Args, "output");
@@ -23,7 +26,7 @@ try
     var store = ScriptHost.GetStore(host);
     if (store is null)
     {
-        JsonOut.Error("no-store", "ITemplateStoreProvider is not registered. Set the DOCUORIA_STORE_LOCAL_PATH environment variable to a directory path to enable the local template store.", null, 1);
+        JsonOut.Error("no-store", "ITemplateStoreProvider is not registered. Pass --store-path <dir> to specify a local template store directory.", null, 1);
     }
 
     var tpl = await store!.LoadAsync(id);

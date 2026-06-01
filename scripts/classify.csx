@@ -16,7 +16,10 @@ try
 {
     Cli.Help(Args, "classify.csx", "Classify a PDF against stored templates (ranked by confidence)",
         ("pdf", true, "Path to the source PDF", false),
-        ("top", false, "Maximum number of results to return (default: 5)", false));
+        ("top", false, "Maximum number of results to return (default: 5)", false),
+        ("store-path", false, "Local template store directory (default: ./templates)", false),
+        ("store-url", false, "API template store URL (mutually exclusive with --store-path)", false),
+        ("store-key", false, "Function key for API store authentication", false));
 
     var pdfPath = Cli.Require(Args, "pdf");
     var topN = int.TryParse(Cli.Get(Args, "top"), out var n) ? n : 5;

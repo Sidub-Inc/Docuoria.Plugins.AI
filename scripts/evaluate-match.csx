@@ -16,7 +16,10 @@ try
 {
     Cli.Help(Args, "evaluate-match.csx", "Evaluate a template's match rule against a PDF",
         ("pdf", true, "Path to the source PDF", false),
-        ("template", true, "Template ID or path to template JSON file", false));
+        ("template", true, "Template ID or path to template JSON file", false),
+        ("store-path", false, "Local template store directory (default: ./templates)", false),
+        ("store-url", false, "API template store URL (mutually exclusive with --store-path)", false),
+        ("store-key", false, "Function key for API store authentication", false));
 
     var pdfPath = Cli.Require(Args, "pdf");
     var templateRef = Cli.Require(Args, "template");

@@ -9,13 +9,16 @@ using Docuoria.Storage;
 
 try
 {
-    Cli.Help(Args, "list-templates.csx", "List all template IDs in the configured store");
+    Cli.Help(Args, "list-templates.csx", "List all template IDs in the configured store",
+        ("store-path", false, "Local template store directory (default: ./templates)", false),
+        ("store-url", false, "API template store URL (mutually exclusive with --store-path)", false),
+        ("store-key", false, "Function key for API store authentication", false));
 
     using var host = ScriptHost.CreateHost(Args.ToArray(), includeStore: true);
     var store = ScriptHost.GetStore(host);
     if (store is null)
     {
-        JsonOut.Error("no-store", "ITemplateStoreProvider is not registered. Set the DOCUORIA_STORE_LOCAL_PATH environment variable to a directory path to enable the local template store.", null, 1);
+        JsonOut.Error("no-store", "ITemplateStoreProvider is not registered. Pass --store-path <dir> to specify a local template store directory.", null, 1);
     }
 
     var ids = new List<string>();
