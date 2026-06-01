@@ -1,6 +1,8 @@
 ﻿# Workflow
 
-The pipeline has seven steps. **Step 1 (Classify) always runs first** and determines whether steps 2â€“4 are needed. Never skip step 1 â€” classification is cheap and avoids redundant exploration.
+The pipeline has seven steps operating through a template store — a directory (or API endpoint) of JSON template files that define extraction and classification rules. Store-aware scripts (`classify`, `evaluate-match`, `list-templates`, `load-template`, `save-template`) require `--store-path <dir>` or `--store-url <url>` to locate the store; always pass the store location explicitly.
+
+**Step 1 (Classify) always runs first** and determines whether steps 2–4 are needed. Never skip step 1 — classification is cheap and avoids redundant exploration.
 
 ```
 1 Classify â”€â”€â–º strong match (â‰¥ 0.8) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º 5 Dry-run â”€â”€â–º 6 Execute â”€â”€â–º done
@@ -13,15 +15,15 @@ The pipeline has seven steps. **Step 1 (Classify) always runs first** and determ
 
 ---
 
-## Step 1 â€” Classify
+## Step 1 — Classify
 
-Determine whether an existing template already handles this PDF.
+Determine whether an existing template already handles this PDF. If the templates directory location is unknown, confirm it before classifying — check for a directory containing `.json` template files near the workspace root, or ask the user.
 
-- **Script:** `dotnet script scripts/classify.csx -- --pdf <pdf>`
+- **Script:** `dotnet script scripts/classify.csx -- --pdf <pdf> --store-path <templates-dir>`
 - **API:** `IDocuoriaEngine.ClassifyAsync` â€” evaluates every stored template's `rootMatchRule` and returns them ranked by `confidence` (`ruleConfidence Ã— extractionProbeScore`).
 - **Output:** `{ "matches": [ { "templateId": "...", "confidence": 0.92 }, ... ] }` â€” descending by confidence.
 
-**Routing:** see [`classification.md` Â§ Interpreting the gradient](classification.md#interpreting-the-gradient) for the canonical confidence-to-action table (â‰¥ 0.8 strong, 0.4â€“0.8 partial, < 0.4 author new). On `error: no-store` (no template store configured), proceed to **Step 2**.
+**Routing:** see [`classification.md` § Interpreting the gradient](classification.md#interpreting-the-gradient) for the canonical confidence-to-action table (≥ 0.8 strong, 0.4–0.8 partial, < 0.4 author new). On `error: no-store` (no templates found at the given path, or no store configured), skip to **Step 2** and author from scratch.
 
 ---
 
@@ -113,12 +115,12 @@ Full pipeline run including the output generator.
 
 Persist the template and verify it ranks correctly in the store. This prevents the new template from stealing classifications from existing templates or ranking too low for its own target.
 
-- **Save:** `dotnet script scripts/save-template.csx -- --template <template.json>`
+- **Save:** `dotnet script scripts/save-template.csx -- --template <template.json> --store-path <templates-dir>`
 - **Verify ranking:**
-  - `dotnet script scripts/classify.csx -- --pdf <target.pdf>` â†’ new template must rank **#1**, confidence â‰¥ 0.8.
-  - `dotnet script scripts/classify.csx -- --pdf <sibling.pdf>` â†’ new template should score < 0.4; existing sibling templates should still rank #1 for their own PDFs.
+  - `dotnet script scripts/classify.csx -- --pdf <target.pdf> --store-path <templates-dir>` â†’ new template must rank **#1**, confidence â‰¥ 0.8.
+  - `dotnet script scripts/classify.csx -- --pdf <sibling.pdf> --store-path <templates-dir>` â†’ new template should score < 0.4; existing sibling templates should still rank #1 for their own PDFs.
 - **API:** `IDocuoriaEngine.ClassifyAsync`, `IDocuoriaEngine.EvaluateMatchAsync`
-- **Other store scripts:** `list-templates.csx` (list all), `load-template.csx --id <id>` (fetch one).
+- **Other store scripts:** `list-templates.csx --store-path <templates-dir>` (enumerate all), `load-template.csx --id <id> --store-path <templates-dir>` (fetch one).
 
 **Done.** The template is stored and will be found by Step 1 on future PDFs of this type.
 

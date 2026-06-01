@@ -2,7 +2,7 @@
 
 ## Scenario
 
-A PDF document with a header (a date and a reference number) and a repeating list of line items. A `Template` already exists in the local store; the goal is to produce a CSV from this PDF without authoring anything new.
+A PDF document with a header (a date and a reference number) and a repeating list of line items. A `Template` already exists in the local template store (a `templates/` directory at the workspace root); the goal is to produce a CSV from this PDF without authoring anything new.
 
 ## Template excerpt
 
@@ -28,8 +28,8 @@ Note: `fieldType` is an **integer** (0 = String, 1 = Number, 4 = Date). See the 
 
 ## Steps
 
-1. `dotnet script scripts/list-templates.csx` — find the template ID that should apply.
-2. `dotnet script scripts/load-template.csx -- --id <id>` — confirm the template loaded and inspect its fields. Add `--output <path>` to write the JSON to a file.
+1. `dotnet script scripts/list-templates.csx -- --store-path ./templates` — find the template ID that should apply.
+2. `dotnet script scripts/load-template.csx -- --id <id> --store-path ./templates` — confirm the template loaded and inspect its fields. Add `--output <path>` to write the JSON to a file.
 3. `dotnet script scripts/dry-run.csx -- --pdf <pdf> --template <template.json>` — confirm a `DryRunSucceeded` outcome. Inspect the extracted fields and (if needed) the `ExtractionDiagnostics` snapshot before publishing.
 4. `dotnet script scripts/execute.csx -- --pdf <pdf> --template <template.json> --format csv --output output.csv` — runs the full pipeline through the registered CSV generator. Engine API used: `IDocuoriaEngine.ExecuteTemplateAsync<CsvOutputGenerator, CsvGeneratorOptions>`.
 

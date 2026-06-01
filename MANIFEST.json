@@ -1,21 +1,21 @@
 {
   "package": "docuoria",
-  "version": "1.0.8",
-  "builtAt": "2026-06-01T00:18:08.4446321Z",
+  "version": "1.0.9",
+  "builtAt": "2026-06-01T02:02:07.1462538Z",
   "sdk": {
     "assembly": "Docuoria.dll",
-    "fileVersion": "1.0.8.0",
-    "informationalVersion": "1.0.8+Branch.main.Sha.52338b859083a2478ace6b033a8adf0f2051cf1a.52338b859083a2478ace6b033a8adf0f2051cf1a"
+    "fileVersion": "1.0.9.0",
+    "informationalVersion": "1.0.9+Branch.main.Sha.d6eba6bb69c20f41400cea5a06dcef4e6e4d3d9b.d6eba6bb69c20f41400cea5a06dcef4e6e4d3d9b"
   },
   "files": [
     {
       "path": ".claude-plugin/plugin.json",
-      "sha256": "0704ebc68216da325266773202d01671ce367a49e16999b3bf3969fcbb2917cd",
+      "sha256": "5535e307a90872b60dd62c0049976e564999479ad29188a9a5ecafb42f804ee0",
       "bytes": 631
     },
     {
       "path": "assets/lib/Docuoria.dll",
-      "sha256": "5c149b578ba25380bcc093826e3449ab4b423ac4eafa095898de252fea89ee7e",
+      "sha256": "51b75f30dca104889cfb013c5f617fb4bc31a25ac67885d7c1018f89acddff33",
       "bytes": 287744
     },
     {
@@ -25,13 +25,13 @@
     },
     {
       "path": "examples/01-extract-to-csv.md",
-      "sha256": "1673af36afd0ea3fa404a428fc4f78f8e151f15c757305c532de6f20653a1fa5",
-      "bytes": 3530
+      "sha256": "8742f36efad83be45a7b76410f90bd1e3a3c5a4889df30237cda19831fdf1b0d",
+      "bytes": 3641
     },
     {
       "path": "examples/02-classify-unknown-pdf.md",
-      "sha256": "4651ca0d6f127d336c1b2b13282a1713cb35e4dd1019ce3828c2b4aaa8d2f486",
-      "bytes": 4785
+      "sha256": "9d24dd10b75693104d19f95f0dfb98ee56deeed8ef69ace07968b27c573418e3",
+      "bytes": 4943
     },
     {
       "path": "examples/03-diagnose-failed-result.md",
@@ -40,8 +40,8 @@
     },
     {
       "path": "references/classification.md",
-      "sha256": "c1df2e9d5d1f43e3f44116ab71aed8f86e1184eeb124dfefbe40288073bfdcdc",
-      "bytes": 16223
+      "sha256": "1ef5549515bf6e9161538d195c33abe841ec7d32a3224e989f83528fb663dbd1",
+      "bytes": 16252
     },
     {
       "path": "references/decision-tree.md",
@@ -50,8 +50,8 @@
     },
     {
       "path": "references/failure-tree.md",
-      "sha256": "cbd03b07014c5408e0ddb248d3bd7572cb7c7920f35ea58d4ab89e4da8840e6c",
-      "bytes": 15828
+      "sha256": "38d7d33a07086391441c7cc3e8dcae52d999497196c1111013ce26eb9e58bcd0",
+      "bytes": 15857
     },
     {
       "path": "references/pattern-authoring.md",
@@ -80,8 +80,8 @@
     },
     {
       "path": "references/workflow.md",
-      "sha256": "a24527b1e9bdf1f11f5d8534f0618706f22d1192718678bfdd4f591f5d2a650d",
-      "bytes": 9761
+      "sha256": "084324d28143c8ae5994534f76fe6c82086da697c04fedba71c6672042af2ec4",
+      "bytes": 10509
     },
     {
       "path": "scripts/_common.csx",
@@ -150,8 +150,8 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "ab296bad1d02ba4d19b7741f1f7480fd6c4ce653be4a229fcd6a77b666782fed",
-      "bytes": 3364
+      "sha256": "ebb619510289c1356b8b8acb3945ee7a8566f34d702742df31e2127cc1bb8c7b",
+      "bytes": 4825
     }
   ]
 }

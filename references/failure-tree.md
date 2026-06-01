@@ -86,7 +86,7 @@ Classification issues come in three forms: no template matched, the wrong templa
 ### First step: get the ranked classification
 
 ```
-dotnet script scripts/classify.csx -- --pdf <pdf>
+dotnet script scripts/classify.csx -- --pdf <pdf> --store-path <templates-dir>
 ```
 
 This returns the top-N templates sorted by `confidence` (descending). For the canonical confidence-to-action table, see [`classification.md` § Interpreting the gradient](classification.md#interpreting-the-gradient). If the matches array is empty, no templates are stored at all — author from scratch (`workflow.md` Step 3).

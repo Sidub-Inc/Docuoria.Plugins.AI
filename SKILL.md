@@ -1,6 +1,6 @@
 ---
 name: docuoria
-description: Use for Docuoria: extract PDF data, author or classify a template, pick an ExtractionSource, write a regex, diagnose a FailedResult or RejectedResult, or check local-processing posture.
+description: Use this skill when working with Docuoria to extract structured data from PDFs, author or validate a template, design match rules for classification, diagnose a FailedResult or RejectedResult, select an ExtractionSource type, write or debug a regex pattern, or verify that PDF processing is local and private. Apply even when the user does not say "Docuoria" — any task involving the Docuoria CLI scripts, template JSON, or the IDocuoriaEngine API qualifies.
 license: MIT
 compatibility: Requires .NET 10 SDK and the `dotnet-script` global tool. SDK assembly (`Docuoria.dll`) is bundled under `assets/lib/`; transitive NuGet dependencies (PdfPig, Tabula, CsvHelper, pythonnet, Microsoft.Extensions.*) are resolved by `dotnet-script` at first run.
 ---
@@ -9,37 +9,55 @@ compatibility: Requires .NET 10 SDK and the `dotnet-script` global tool. SDK ass
 
 ## Invocation
 
-Invoke every script as `dotnet script scripts/<name>.csx -- --<flag> <value>` from the skill root. Flagged form is mandatory — positional arguments are rejected by `_common.csx`. Pass `--help` to any script for full flag list.
+All scripts follow `dotnet script scripts/<name>.csx -- --<flag> <value>`, run from the skill root. The `--` separator is mandatory — without it, dotnet-script consumes the flags as its own. Positional arguments are rejected; pass `--help` to any script for its full flag list.
+
+Scripts divide into two groups:
+
+| Group | Scripts | Store flag |
+| --- | --- | --- |
+| **Store-aware** — read from or write to a template store | `classify`, `evaluate-match`, `list-templates`, `load-template`, `save-template` | `--store-path <dir>` or `--store-url <url>` |
+| **Standalone** — operate on individual PDF and/or template files | `inspect`, `test-pattern`, `test-groups`, `dry-run`, `execute`, `validate-template` | — |
+
+Store-aware scripts accept `--store-path <dir>` (local directory) or `--store-url <url>` (API endpoint) to locate templates; these flags are mutually exclusive. When omitted, `--store-path` defaults to `./templates` relative to the process working directory — since the CWD varies by environment, always pass the store location explicitly.
+
+## Workflow
+
+The pipeline runs in order; classification determines the entry point. Load `references/workflow.md` for the full step-by-step guide.
+
+1. **Classify** — match the PDF against all stored templates
+2. **Inspect** — read the engine's text extraction (when no template matches)
+3. **Test** — prove regex patterns against the engine's haystack
+4. **Build** — author the template JSON, validate classification rules and schema
+5. **Dry-run** — end-to-end extraction without output generation
+6. **Execute** — full pipeline producing CSV or JSON output
+7. **Store** — persist the template and verify it ranks correctly
 
 ## Routing
 
+Consult the canonical reference before relying on memory. Each concern has a single owner.
+
 | If the agent needs to… | Load |
 | --- | --- |
-| Decide which pipeline step to run next (classify → inspect → test → build → dry-run → execute → store) | `references/workflow.md` |
+| Follow the full pipeline step-by-step | `references/workflow.md` |
 | Pick an `ExtractionSource` subtype for a field (`TextPattern`, `TableRows`, `TextAnchor`, `MetadataField`, `Fallback`) | `references/decision-tree.md` |
 | Design a discriminating `rootMatchRule` (token selection, composite architecture, structural rules, weights, thresholds) | `references/classification.md` |
 | Diagnose a `RejectedResult`, `FailedResult`, classification failure, or empty/incomplete `DryRunSucceeded` | `references/failure-tree.md` |
-| Map a stderr `error.code` (`pdf-not-found`, `bad-format`, `rejected`, `failed`, `empty-result`, …) to a remediation branch | `references/failure-tree.md` § Stderr error.code → Branch routing |
+| Map a stderr `error.code` to a remediation branch | `references/failure-tree.md` § Stderr error.code → Branch routing |
 | Copy a regex pattern from the library or adapt one to a specific PDF | `references/patterns.md` then `references/pattern-authoring.md` |
-| Look up a CLI script's flags, output envelope, error codes, or environment variables | `references/scripts.md` |
+| Look up a CLI script's flags, output envelope, or error codes | `references/scripts.md` |
 | Look up a template JSON property, `$kind` discriminator, enum value, or shape | `references/template-reference.md` |
 | Answer whether PDF processing is local/private | `references/privacy.md` |
 
-## Package layout
+## Skill layout
 
-This skill is packaged as a Claude Code plugin. When installed, the package lays out as:
-
-- `.claude-plugin/plugin.json` — plugin manifest (name, version, author, keywords).
-- `SKILL.md` — this router (index + invocation rule); auto-discovered as a single-skill plugin.
-- `references/` — deep guides loaded on demand.
-- `scripts/` — `dotnet-script` CLI surface (`_common.csx` plus 11 verb scripts; `references/scripts.md` is the canonical CLI reference).
-- `assets/lib/Docuoria.dll` — bundled SDK assembly referenced by `scripts/_common.csx`.
-- `assets/schemas/template-schema.json` — JSON Schema for template authoring/validation.
+- `SKILL.md` — this router; loaded at skill activation.
+- `references/` — deep guides loaded on demand (see Routing table).
+- `scripts/` — `dotnet-script` CLI surface (`_common.csx` plus 11 verb scripts).
+- `assets/lib/Docuoria.dll` — bundled SDK assembly.
+- `assets/schemas/template-schema.json` — JSON Schema for template authoring and validation.
 - `examples/` — three worked end-to-end walkthroughs.
-- `MANIFEST.json` — package version + per-file SHA-256 (integrity check).
 
-## Conventions
+## Gotchas
 
-- Read the canonical reference for any topic before relying on memory; the routing table above identifies the single owner.
-- Adapt every regex and rule to the actual PDF using `scripts/test-pattern.csx` and `scripts/inspect.csx` rather than pasting library patterns verbatim.
-- Resolve engine API names (`IDocuoriaEngine`, `ExtractionSource`, `MatchRule`, `FieldMapping`) against the bundled `assets/lib/Docuoria.dll`.
+- **`fieldType` in template JSON must be an integer (0–5), never a string.** The engine rejects string values with `RejectionReason.MalformedTemplate`. Enum: 0 String, 1 Number, 2 Integer, 3 Boolean, 4 Date, 5 Timestamp. Run `validate-template.csx` to catch this before dry-run.
+- **Adapt every regex to the actual PDF.** The engine's flattened text differs from the visual layout — whitespace, line breaks, and character encoding may not match what you see. Validate with `test-pattern.csx` and `inspect.csx` rather than pasting library patterns verbatim.

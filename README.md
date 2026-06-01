@@ -6,7 +6,7 @@ This repository distributes the **Docuoria AI Plugin** (`docuoria`), a skill
 package that enables AI agents to extract structured data from PDFs using
 template-driven pipelines.
 
-**Current version: 1.0.8**
+**Current version: 1.0.9**
 
 ---
 
@@ -38,7 +38,7 @@ git clone https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/skills/do
 ### Pin to a specific version
 
 ```bash
-git clone --branch v1.0.8 --depth 1 \
+git clone --branch v1.0.9 --depth 1 \
   https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/skills/docuoria
 ```
 

@@ -235,7 +235,7 @@ Before storing a template, validate classification quality:
 
 3. **Ranked classification** — if multiple templates are stored, verify correct ranking:
    ```
-   dotnet script scripts/classify.csx -- --pdf <target.pdf>
+   dotnet script scripts/classify.csx -- --pdf <target.pdf> --store-path <templates-dir>
    ```
    The correct template must appear at the top of the ranked list with the highest `confidence`. Check the gap between the top match and the next — a wide gap indicates strong discrimination, a narrow gap indicates ambiguity.
 

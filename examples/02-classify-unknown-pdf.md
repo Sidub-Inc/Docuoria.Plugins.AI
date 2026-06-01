@@ -2,7 +2,7 @@
 
 ## Scenario
 
-A PDF document arrives. You do not know whether any stored template matches it. The goal is to route it to a matching template, identify a partial match to refine, or recognise the PDF needs a new template authored.
+A PDF document arrives. You do not know whether any stored template matches it. The templates are in a local store directory (`./templates`). The goal is to route the PDF to a matching template, identify a partial match to refine, or recognise it needs a new template authored.
 
 ## How classification works
 
@@ -61,7 +61,7 @@ The first child is a broad gate (must be a Microsoft Invoice). The second child 
 
 ## Steps
 
-1. **Classify:** `dotnet script scripts/classify.csx -- --pdf <pdf>`
+1. **Classify:** `dotnet script scripts/classify.csx -- --pdf <pdf> --store-path ./templates`
 
    Example output:
    ```json
@@ -83,13 +83,13 @@ The first child is a broad gate (must be a Microsoft Invoice). The second child 
 
 4. **For a partial match** — try extraction, then iterate:
    - Run dry-run with the top-scoring template. Even if some fields are incomplete, others may transfer.
-   - Load the template (`load-template.csx`), adjust the match rules and extraction sources for the new document type.
+   - Load the template (`load-template.csx -- --id <matched-id> --store-path ./templates`), adjust the match rules and extraction sources for the new document type.
    - Validate the updated template with positive + negative testing before storing.
 
 5. **When authoring a new template** — validate classification before storing:
    - **Positive:** `dotnet script scripts/evaluate-match.csx -- --pdf <target.pdf> --template <new-template.json>` → high `confidence`.
    - **Negative:** repeat with PDFs from the same vendor that should NOT match → low `confidence`.
-   - **Ranked:** `dotnet script scripts/classify.csx -- --pdf <target.pdf>` → new template must rank #1 with a clear gap over siblings.
+   - **Ranked:** `dotnet script scripts/classify.csx -- --pdf <target.pdf> --store-path ./templates` → new template must rank #1 with a clear gap over siblings.
 
 ## Expected outcome
 
