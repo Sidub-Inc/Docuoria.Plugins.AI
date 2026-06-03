@@ -6,13 +6,39 @@ This repository distributes the **Docuoria AI Plugin** (`docuoria`), a skill
 package that enables AI agents to extract structured data from PDFs using
 template-driven pipelines.
 
-**Current version: 1.0.9**
+**Current version: 1.0.14**
 
 ---
 
 ## Quick Start
 
-### Claude Code
+The easiest way to install the Docuoria AI Plugin is with the CLI:
+
+```bash
+# npm (Node.js ≥ 20)
+npm install -g @sidub/docuoria
+docuoria init
+
+# .NET global tool
+dotnet tool install -g Docuoria.Cli
+docuoria init
+```
+
+The interactive tool picker detects which AI tools are active in your project
+and scaffolds the skill files into the correct locations automatically.
+
+**Non-interactive (scripted):**
+
+```bash
+docuoria init --tools claude,cursor --no-interactive
+docuoria update          # re-apply after a CLI upgrade
+docuoria list-tools      # check status
+docuoria doctor          # report drift
+```
+
+### Manual install (advanced)
+
+#### Claude Code
 
 Clone and load as a local plugin:
 
@@ -21,24 +47,16 @@ git clone https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .plugins/docuoria
 claude --plugin-dir .plugins/docuoria
 ```
 
-### VS Code (GitHub Copilot)
-
-Add as a git submodule in your workspace:
+#### VS Code (GitHub Copilot)
 
 ```bash
 git submodule add https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/skills/docuoria
 ```
 
-Or clone directly:
-
-```bash
-git clone https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/skills/docuoria
-```
-
 ### Pin to a specific version
 
 ```bash
-git clone --branch v1.0.9 --depth 1 \
+git clone --branch v1.0.14 --depth 1 \
   https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/skills/docuoria
 ```
 
