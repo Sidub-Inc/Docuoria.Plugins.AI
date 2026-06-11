@@ -6,7 +6,7 @@ A PDF document arrives. You do not know whether any stored template matches it. 
 
 ## How classification works
 
-The `classify.csx` script evaluates every stored template's `rootMatchRule` against the PDF and returns the top-N templates ranked by `confidence` — an aggregated score (`ruleConfidence × extractionProbeScore`) that reflects both rule match strength and extraction viability. This gradient lets you distinguish between strong matches, partial matches worth refining, and complete misses.
+The `classify.csx` script (via `ClassifyRankedAsync`) evaluates every stored template's `rootMatchRule` against the PDF and returns the top-N templates ranked by `classificationScore` (descending). The score is composite: `requirementsSatisfied ? ruleConfidence × (0.5·specificity + 0.3·quantity + 0.2·coverage) : 0` — use it to **order** candidates only, never as an absolute gate. Each match also carries an engine-computed `recommendation` (`"strong"` / `"partial"` / `"no-match"`) that distinguishes strong matches, partial matches worth refining, and complete misses.
 
 ## Example match rules — weak vs. strong
 
@@ -23,9 +23,9 @@ The `classify.csx` script evaluates every stored template's `rootMatchRule` agai
 }
 ```
 
-Every Microsoft invoice (subscription, Azure, support) contains these tokens. All would score `confidence: 1.0` — no discrimination.
+Every Microsoft invoice (subscription, Azure, support) contains these tokens. All would score `classificationScore` near the maximum — no discrimination.
 
-### Strong — composite with discriminator (produces meaningful gradients)
+### Strong — composite with discriminator (produces clean separation)
 
 ```json
 {
@@ -57,7 +57,7 @@ Every Microsoft invoice (subscription, Azure, support) contains these tokens. Al
 }
 ```
 
-The first child is a broad gate (must be a Microsoft Invoice). The second child — weighted at 2.0 — is the **discriminator** that targets subscription invoices specifically. A subscription invoice scores `confidence: 1.0`. An Azure usage invoice scores `confidence: 0.33` (discriminator fails: `(1.0×1 + 0.0×2) / 3`). The gradient clearly separates the two.
+The first child is a broad gate (must be a Microsoft Invoice). The second child — weighted at 2.0 — is the **discriminator** that targets subscription invoices specifically. A subscription invoice passes both children, so the composite rule confidence is high and its `classificationScore` ranks at the top. For an Azure usage invoice the discriminator contributes 0, so the composite rule confidence is `(1.0×1 + 0.0×2) / 3 = 0.33` — below the `0.8` rule threshold, so the rule does not match and the template's `recommendation` is `"no-match"`. The recommendation cleanly separates the two.
 
 ## Steps
 
@@ -67,19 +67,18 @@ The first child is a broad gate (must be a Microsoft Invoice). The second child 
    ```json
    {
      "matches": [
-       { "templateId": "ms-subscription-invoice", "confidence": 0.92 },
-       { "templateId": "ms-azure-invoice", "confidence": 0.35 },
-       { "templateId": "generic-invoice", "confidence": 0.12 }
+       { "templateId": "ms-subscription-invoice", "classificationScore": 0.62, "recommendation": "strong", "requirementsSatisfied": true, "ambiguity": null },
+       { "templateId": "ms-azure-invoice", "classificationScore": 0.21, "recommendation": "no-match", "requirementsSatisfied": true, "ambiguity": null }
      ]
    }
    ```
 
-2. **Interpret the results:** map the top match's `confidence` to an action using the canonical gradient table in [`../references/classification.md` § Interpreting the gradient](../references/classification.md#interpreting-the-gradient). An empty `matches` array means no templates are stored — author from scratch.
+2. **Interpret the results:** map the top match's `recommendation` to an action using the canonical table in [`../references/classification.md` § Interpreting the recommendation](../references/classification.md#interpreting-the-recommendation). An empty `matches` array means no templates are stored (or all candidates have `requirementsSatisfied: false`) — author from scratch.
 
 3. **For a strong match** — verify correctness:
    - Run `dotnet script scripts/dry-run.csx -- --pdf <pdf> --template <matched-id-or-path>`
    - If extraction produces expected data → done.
-   - If extraction produces empty collections or nonsensical data → **misclassification**. See [`../references/failure-tree.md`](../references/failure-tree.md) Branch C.
+   - If extraction produces empty collections or nonsensical data → **misclassification**. See [`../references/troubleshooting.md` § Branch C](../references/troubleshooting.md#branch-c--classification-failure).
 
 4. **For a partial match** — try extraction, then iterate:
    - Run dry-run with the top-scoring template. Even if some fields are incomplete, others may transfer.
@@ -87,8 +86,8 @@ The first child is a broad gate (must be a Microsoft Invoice). The second child 
    - Validate the updated template with positive + negative testing before storing.
 
 5. **When authoring a new template** — validate classification before storing:
-   - **Positive:** `dotnet script scripts/evaluate-match.csx -- --pdf <target.pdf> --template <new-template.json>` → high `confidence`.
-   - **Negative:** repeat with PDFs from the same vendor that should NOT match → low `confidence`.
+   - **Positive:** `dotnet script scripts/evaluate-match.csx -- --pdf <target.pdf> --template <new-template.json>` → `recommendation: "strong"`.
+   - **Negative:** repeat with PDFs from the same vendor that should NOT match → `recommendation: "no-match"`.
    - **Ranked:** `dotnet script scripts/classify.csx -- --pdf <target.pdf> --store-path ./templates` → new template must rank #1 with a clear gap over siblings.
 
 ## Expected outcome
@@ -97,6 +96,6 @@ Either: a high-confidence match → proceed to extraction. Or: a partial match �
 
 ## See also
 
-- [`../references/classification.md`](../references/classification.md) — full guide to designing discriminating match rules and interpreting the confidence gradient.
-- [`../references/workflow.md`](../references/workflow.md) Step 1 — classify is the entry point; confidence routing determines the next step.
-- [`../references/failure-tree.md`](../references/failure-tree.md) Branch C — diagnosing classification issues with ranked output.
+- [`../references/classification.md`](../references/classification.md) — full guide to designing discriminating match rules and interpreting the `recommendation`.
+- [`../references/workflow.md`](../references/workflow.md) Step 1 — classify is the entry point; the `recommendation` determines the next step.
+- [`../references/troubleshooting.md` § Branch C](../references/troubleshooting.md#branch-c--classification-failure) — diagnosing classification issues with ranked output.

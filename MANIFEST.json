@@ -1,27 +1,27 @@
 {
   "package": "docuoria",
-  "version": "1.0.15",
-  "builtAt": "2026-06-03T02:39:22.6166355Z",
+  "version": "1.0.40",
+  "builtAt": "2026-06-11T03:37:24.2365959Z",
   "sdk": {
     "assembly": "Docuoria.dll",
-    "fileVersion": "1.0.15.0",
-    "informationalVersion": "1.0.15+Branch.main.Sha.67cad57e05c48eb1b6025c0077fa9357e32c6cdc.67cad57e05c48eb1b6025c0077fa9357e32c6cdc"
+    "fileVersion": "1.0.40.0",
+    "informationalVersion": "1.0.40+Branch.main.Sha.d18f177d03bfe44361eae83756cc6e2450f74e16.d18f177d03bfe44361eae83756cc6e2450f74e16"
   },
   "files": [
     {
       "path": ".claude-plugin/plugin.json",
-      "sha256": "4ace45efa10dc2513678c7e262c1c0292c0ecfb67fb325657dd7ce0732ff967d",
+      "sha256": "42dc91581fb9501906fc21be6b5a1ddd7cb627d46e6c1fa6ca43371a7d7f8324",
       "bytes": 632
     },
     {
       "path": "assets/lib/Docuoria.dll",
-      "sha256": "64af912f8a90ec4ca5cb2c087f5e1e105ae2eb8213829431cafcac4789e70f6c",
-      "bytes": 287744
+      "sha256": "05a9e8adf41214b504b1eca65d1c39cd8229a3493f087138dd27aea8d66bb8b9",
+      "bytes": 374272
     },
     {
       "path": "assets/schemas/template-schema.json",
-      "sha256": "157f4f6f0643232c892c5362a2aaaeb3927528d7b9222237de1e387afe3d710c",
-      "bytes": 15327
+      "sha256": "bd6b55f9d76899f904031467fa21282d44a03d5bcb1aab0b1d9ce55999c268dd",
+      "bytes": 17100
     },
     {
       "path": "commands/classify.md",
@@ -50,93 +50,103 @@
     },
     {
       "path": "examples/01-extract-to-csv.md",
-      "sha256": "8742f36efad83be45a7b76410f90bd1e3a3c5a4889df30237cda19831fdf1b0d",
-      "bytes": 3641
+      "sha256": "aa3dc90b387fd31a6b08d31a7ba7acbe750780e1f906250e59d81b892a6ffe28",
+      "bytes": 3769
     },
     {
       "path": "examples/02-classify-unknown-pdf.md",
-      "sha256": "9d24dd10b75693104d19f95f0dfb98ee56deeed8ef69ace07968b27c573418e3",
-      "bytes": 4943
+      "sha256": "813fa3c90eea1ccdc28c4a12b3f31f3efddc2b4eb7752f7c4b7dad87c8ea725c",
+      "bytes": 5663
     },
     {
       "path": "examples/03-diagnose-failed-result.md",
-      "sha256": "4b86cb4bf80460c1d483dd02b4454f858d04594bfe3c1676949b4cb5179de926",
-      "bytes": 3955
+      "sha256": "d863e54a8169f4c5fcd48938c3f6fb4b57732c674fb0ab172a282fda607bad03",
+      "bytes": 3892
+    },
+    {
+      "path": "examples/04-survey-batch.md",
+      "sha256": "bcbea05f641afcbe59df6e0e0ebe0b0f05d0debe7609805031e5e8f002ea0dfb",
+      "bytes": 6956
+    },
+    {
+      "path": "examples/05-recurring-ledger.md",
+      "sha256": "f6f1a46ec3c404ca35330a9d10982c711cb72fde084a1a91939aa64b16fabfc9",
+      "bytes": 4852
     },
     {
       "path": "references/classification.md",
-      "sha256": "1ef5549515bf6e9161538d195c33abe841ec7d32a3224e989f83528fb663dbd1",
-      "bytes": 16252
+      "sha256": "b897dca1d436de554b17291ea3cf9c215c0a897d3d727795eed36a99a114e930",
+      "bytes": 25183
     },
     {
-      "path": "references/decision-tree.md",
-      "sha256": "bd1522be6352b0c8df75b0abc8e18c3e785cef463abf0e75cbd88a58d36cf1fc",
-      "bytes": 5570
-    },
-    {
-      "path": "references/failure-tree.md",
-      "sha256": "38d7d33a07086391441c7cc3e8dcae52d999497196c1111013ce26eb9e58bcd0",
-      "bytes": 15857
-    },
-    {
-      "path": "references/pattern-authoring.md",
-      "sha256": "b678b2290cf0ba2a126bb03224c10c984d952475625dc7209b2d20ab04a9a2f2",
-      "bytes": 3372
+      "path": "references/extraction-sources.md",
+      "sha256": "cd9a31a9d823d21c225911f3bb080b7c61c8863b9ea46f3e4d077bbe7bf7ac83",
+      "bytes": 10069
     },
     {
       "path": "references/patterns.md",
-      "sha256": "92c627dced78fc574f3bd729af7f21cf9ee8c7914b9ec4766c9374b634275566",
-      "bytes": 4156
+      "sha256": "d7cc0b49284e60fd95d0dd09e70c0f74c61de81265df78c90080359534acb4e7",
+      "bytes": 13234
     },
     {
       "path": "references/privacy.md",
-      "sha256": "2448abb1623bed15f646eddc0875a4ba30a95d33cf66f2779f42b8dbf55cc0d0",
-      "bytes": 3502
+      "sha256": "0239c9e8372ec33618aa943593d28351b66f58285252e576821ae1cc5a0c0f98",
+      "bytes": 3481
     },
     {
       "path": "references/scripts.md",
-      "sha256": "7b6a35582c789b6a24678139e11fc58e3670507a4d3532108d37832068a73827",
-      "bytes": 15127
+      "sha256": "3ee0b97bfd9db8d433c2e12b13aab33bde64d1f8a791f8f42b8ed81c1d31db66",
+      "bytes": 34206
     },
     {
       "path": "references/template-reference.md",
-      "sha256": "6b640f07bfa3c553a6f274cbc639e5badc8a39652de04ad8de602631f1e15314",
-      "bytes": 25089
+      "sha256": "daf34a05c83288bf4c575073041e4ef5da4b7d70dc2a315051f684fcbecf30c7",
+      "bytes": 29926
+    },
+    {
+      "path": "references/troubleshooting.md",
+      "sha256": "0c9ccf05264ee376fb29bdc5cfe52045afe5890f72d5bc773acf42e9bed7f474",
+      "bytes": 25582
     },
     {
       "path": "references/workflow.md",
-      "sha256": "084324d28143c8ae5994534f76fe6c82086da697c04fedba71c6672042af2ec4",
-      "bytes": 10509
+      "sha256": "51d2434a662da21f82a5f4749f0010fdaf0df845513c24990049cbcb3b7ac740",
+      "bytes": 29295
     },
     {
       "path": "scripts/_common.csx",
-      "sha256": "65eeea7c7f3b9383804bab2d4c8a4d204afa873f94c013d8a06181bf01fc07c5",
-      "bytes": 10518
+      "sha256": "5c0022b0091a31916e6a256f82c44e4e8e7e51601fd6103d5c4be50ed82e8ce5",
+      "bytes": 15653
+    },
+    {
+      "path": "scripts/batch-execute.csx",
+      "sha256": "6e4f3c89b1e5a9795d327c3437012fe45813d899ed37a25bbc1730a0a81215ca",
+      "bytes": 21593
     },
     {
       "path": "scripts/classify.csx",
-      "sha256": "386bdae4c07f4b8a6305c7e2d77dda236fe36079ab618cc9811a1593f49b605a",
-      "bytes": 2229
+      "sha256": "225e85b76d9346aab7f0b2c370f71a7a2c8c3b38c3bd7c49b238be2bb7c9d41e",
+      "bytes": 2954
     },
     {
       "path": "scripts/dry-run.csx",
-      "sha256": "d89d7f7a5333dae60628ae43374a81ef001fcc79db99560619779bb414b79fa8",
-      "bytes": 3279
+      "sha256": "7b8207e539183ea87047585d25bba1b72b7dff2280a50c73365d3e856464e6c8",
+      "bytes": 3622
     },
     {
       "path": "scripts/evaluate-match.csx",
-      "sha256": "3157aa515d648b913a829b069a8187e4979a6204518e164c79c60610e625ef83",
-      "bytes": 2727
+      "sha256": "1a5511eef9e3860ba221ee64518d7e113246290b7d4ba89c225ba5c4b60d929b",
+      "bytes": 3509
     },
     {
       "path": "scripts/execute.csx",
-      "sha256": "7e609a1f8e4883f4948c5da66f044ed1941f93b89170e758d85580264eefd8e7",
-      "bytes": 3309
+      "sha256": "d0aaf393682316999b393df36b34d18bea36c3380d7587400d9b4e76d2978ca0",
+      "bytes": 9755
     },
     {
       "path": "scripts/inspect.csx",
-      "sha256": "ee7dd99e4e1905c8b60664c42b48c4f23aece97a6f3f73ed695cb0957c49ad1a",
-      "bytes": 1332
+      "sha256": "f02a1f8c6db7a0c7dd2b1ed60e1cf1fda7af85d9b63ef6e5b4a3497c0d6734e6",
+      "bytes": 2228
     },
     {
       "path": "scripts/list-templates.csx",
@@ -149,6 +159,11 @@
       "bytes": 1970
     },
     {
+      "path": "scripts/regression-check.csx",
+      "sha256": "2bf88b069f2404b17553cf991c206a3e9e61ebf41202004ef7214248a3e3eda6",
+      "bytes": 5433
+    },
+    {
       "path": "scripts/save-template.csx",
       "sha256": "f4f9ff50b33a1f69e5f78af7c2122eb47fe3f84274e06831e56ac41be72cbed6",
       "bytes": 1936
@@ -159,124 +174,139 @@
       "bytes": 2610
     },
     {
+      "path": "scripts/survey.csx",
+      "sha256": "134f9b0c956f4f7e1530874f7bd0631ff38ddc4e9163d490d6d3b27cb8c38217",
+      "bytes": 3432
+    },
+    {
       "path": "scripts/test-groups.csx",
-      "sha256": "71db4230f994a9946d3c62628aa2880562e0590262095fac6655500122e94ead",
-      "bytes": 1445
-    },
-    {
-      "path": "scripts/test-pattern.csx",
-      "sha256": "b61b15f163c54d0a5331c72dbea0b388ac8c1353d1fc628f165d4adee7900b66",
-      "bytes": 1982
-    },
-    {
-      "path": "scripts/validate-template.csx",
-      "sha256": "6c3db1bb1f7b0ceae5a546568b151fd16f80b3773cb1b840c01cc4f660ba4ab8",
-      "bytes": 1800
-    },
-    {
-      "path": "SKILL.md",
-      "sha256": "9f341be7cc9a5bacb2543700e9a51f5acfa14d52825d415b40e8ff8dc150b052",
-      "bytes": 5301
-    },
-    {
-      "path": "skill/assets/lib/Docuoria.dll",
-      "sha256": "64af912f8a90ec4ca5cb2c087f5e1e105ae2eb8213829431cafcac4789e70f6c",
-      "bytes": 287744
-    },
-    {
-      "path": "skill/assets/schemas/template-schema.json",
-      "sha256": "157f4f6f0643232c892c5362a2aaaeb3927528d7b9222237de1e387afe3d710c",
-      "bytes": 15327
-    },
-    {
-      "path": "skill/examples/01-extract-to-csv.md",
-      "sha256": "8742f36efad83be45a7b76410f90bd1e3a3c5a4889df30237cda19831fdf1b0d",
-      "bytes": 3641
-    },
-    {
-      "path": "skill/examples/02-classify-unknown-pdf.md",
-      "sha256": "9d24dd10b75693104d19f95f0dfb98ee56deeed8ef69ace07968b27c573418e3",
-      "bytes": 4943
-    },
-    {
-      "path": "skill/examples/03-diagnose-failed-result.md",
-      "sha256": "4b86cb4bf80460c1d483dd02b4454f858d04594bfe3c1676949b4cb5179de926",
-      "bytes": 3955
-    },
-    {
-      "path": "skill/references/classification.md",
-      "sha256": "1ef5549515bf6e9161538d195c33abe841ec7d32a3224e989f83528fb663dbd1",
-      "bytes": 16252
-    },
-    {
-      "path": "skill/references/decision-tree.md",
-      "sha256": "bd1522be6352b0c8df75b0abc8e18c3e785cef463abf0e75cbd88a58d36cf1fc",
-      "bytes": 5570
-    },
-    {
-      "path": "skill/references/failure-tree.md",
-      "sha256": "38d7d33a07086391441c7cc3e8dcae52d999497196c1111013ce26eb9e58bcd0",
-      "bytes": 15857
-    },
-    {
-      "path": "skill/references/pattern-authoring.md",
-      "sha256": "b678b2290cf0ba2a126bb03224c10c984d952475625dc7209b2d20ab04a9a2f2",
-      "bytes": 3372
-    },
-    {
-      "path": "skill/references/patterns.md",
-      "sha256": "92c627dced78fc574f3bd729af7f21cf9ee8c7914b9ec4766c9374b634275566",
-      "bytes": 4156
-    },
-    {
-      "path": "skill/references/privacy.md",
-      "sha256": "2448abb1623bed15f646eddc0875a4ba30a95d33cf66f2779f42b8dbf55cc0d0",
-      "bytes": 3502
-    },
-    {
-      "path": "skill/references/scripts.md",
-      "sha256": "7b6a35582c789b6a24678139e11fc58e3670507a4d3532108d37832068a73827",
-      "bytes": 15127
-    },
-    {
-      "path": "skill/references/template-reference.md",
-      "sha256": "6b640f07bfa3c553a6f274cbc639e5badc8a39652de04ad8de602631f1e15314",
-      "bytes": 25089
-    },
-    {
-      "path": "skill/references/workflow.md",
-      "sha256": "084324d28143c8ae5994534f76fe6c82086da697c04fedba71c6672042af2ec4",
-      "bytes": 10509
-    },
-    {
-      "path": "skill/scripts/_common.csx",
-      "sha256": "65eeea7c7f3b9383804bab2d4c8a4d204afa873f94c013d8a06181bf01fc07c5",
-      "bytes": 10518
-    },
-    {
-      "path": "skill/scripts/classify.csx",
-      "sha256": "386bdae4c07f4b8a6305c7e2d77dda236fe36079ab618cc9811a1593f49b605a",
-      "bytes": 2229
-    },
-    {
-      "path": "skill/scripts/dry-run.csx",
-      "sha256": "d89d7f7a5333dae60628ae43374a81ef001fcc79db99560619779bb414b79fa8",
-      "bytes": 3279
-    },
-    {
-      "path": "skill/scripts/evaluate-match.csx",
-      "sha256": "3157aa515d648b913a829b069a8187e4979a6204518e164c79c60610e625ef83",
+      "sha256": "e9d3814d30b5f92d1eb1787ebdedfb100ac87be7c1beac3d645922399f6ece0f",
       "bytes": 2727
     },
     {
+      "path": "scripts/test-pattern.csx",
+      "sha256": "e901fd8ab5898241956432d3fa4a31c4d1ff8d3a8b05cae79e3421fe02cda9c0",
+      "bytes": 3068
+    },
+    {
+      "path": "scripts/validate-template.csx",
+      "sha256": "7ad2bd4b9d0e9daff16cac701b2c5f994fac4fa80f741357beb2643a40fbacb7",
+      "bytes": 2772
+    },
+    {
+      "path": "SKILL.md",
+      "sha256": "2e9c65302390510ce1250cae105beb6a812901e9ab0cdb839e1575b4ef665c44",
+      "bytes": 13364
+    },
+    {
+      "path": "skill/assets/lib/Docuoria.dll",
+      "sha256": "05a9e8adf41214b504b1eca65d1c39cd8229a3493f087138dd27aea8d66bb8b9",
+      "bytes": 374272
+    },
+    {
+      "path": "skill/assets/schemas/template-schema.json",
+      "sha256": "bd6b55f9d76899f904031467fa21282d44a03d5bcb1aab0b1d9ce55999c268dd",
+      "bytes": 17100
+    },
+    {
+      "path": "skill/examples/01-extract-to-csv.md",
+      "sha256": "aa3dc90b387fd31a6b08d31a7ba7acbe750780e1f906250e59d81b892a6ffe28",
+      "bytes": 3769
+    },
+    {
+      "path": "skill/examples/02-classify-unknown-pdf.md",
+      "sha256": "813fa3c90eea1ccdc28c4a12b3f31f3efddc2b4eb7752f7c4b7dad87c8ea725c",
+      "bytes": 5663
+    },
+    {
+      "path": "skill/examples/03-diagnose-failed-result.md",
+      "sha256": "d863e54a8169f4c5fcd48938c3f6fb4b57732c674fb0ab172a282fda607bad03",
+      "bytes": 3892
+    },
+    {
+      "path": "skill/examples/04-survey-batch.md",
+      "sha256": "bcbea05f641afcbe59df6e0e0ebe0b0f05d0debe7609805031e5e8f002ea0dfb",
+      "bytes": 6956
+    },
+    {
+      "path": "skill/examples/05-recurring-ledger.md",
+      "sha256": "f6f1a46ec3c404ca35330a9d10982c711cb72fde084a1a91939aa64b16fabfc9",
+      "bytes": 4852
+    },
+    {
+      "path": "skill/references/classification.md",
+      "sha256": "b897dca1d436de554b17291ea3cf9c215c0a897d3d727795eed36a99a114e930",
+      "bytes": 25183
+    },
+    {
+      "path": "skill/references/extraction-sources.md",
+      "sha256": "cd9a31a9d823d21c225911f3bb080b7c61c8863b9ea46f3e4d077bbe7bf7ac83",
+      "bytes": 10069
+    },
+    {
+      "path": "skill/references/patterns.md",
+      "sha256": "d7cc0b49284e60fd95d0dd09e70c0f74c61de81265df78c90080359534acb4e7",
+      "bytes": 13234
+    },
+    {
+      "path": "skill/references/privacy.md",
+      "sha256": "0239c9e8372ec33618aa943593d28351b66f58285252e576821ae1cc5a0c0f98",
+      "bytes": 3481
+    },
+    {
+      "path": "skill/references/scripts.md",
+      "sha256": "3ee0b97bfd9db8d433c2e12b13aab33bde64d1f8a791f8f42b8ed81c1d31db66",
+      "bytes": 34206
+    },
+    {
+      "path": "skill/references/template-reference.md",
+      "sha256": "daf34a05c83288bf4c575073041e4ef5da4b7d70dc2a315051f684fcbecf30c7",
+      "bytes": 29926
+    },
+    {
+      "path": "skill/references/troubleshooting.md",
+      "sha256": "0c9ccf05264ee376fb29bdc5cfe52045afe5890f72d5bc773acf42e9bed7f474",
+      "bytes": 25582
+    },
+    {
+      "path": "skill/references/workflow.md",
+      "sha256": "51d2434a662da21f82a5f4749f0010fdaf0df845513c24990049cbcb3b7ac740",
+      "bytes": 29295
+    },
+    {
+      "path": "skill/scripts/_common.csx",
+      "sha256": "5c0022b0091a31916e6a256f82c44e4e8e7e51601fd6103d5c4be50ed82e8ce5",
+      "bytes": 15653
+    },
+    {
+      "path": "skill/scripts/batch-execute.csx",
+      "sha256": "6e4f3c89b1e5a9795d327c3437012fe45813d899ed37a25bbc1730a0a81215ca",
+      "bytes": 21593
+    },
+    {
+      "path": "skill/scripts/classify.csx",
+      "sha256": "225e85b76d9346aab7f0b2c370f71a7a2c8c3b38c3bd7c49b238be2bb7c9d41e",
+      "bytes": 2954
+    },
+    {
+      "path": "skill/scripts/dry-run.csx",
+      "sha256": "7b8207e539183ea87047585d25bba1b72b7dff2280a50c73365d3e856464e6c8",
+      "bytes": 3622
+    },
+    {
+      "path": "skill/scripts/evaluate-match.csx",
+      "sha256": "1a5511eef9e3860ba221ee64518d7e113246290b7d4ba89c225ba5c4b60d929b",
+      "bytes": 3509
+    },
+    {
       "path": "skill/scripts/execute.csx",
-      "sha256": "7e609a1f8e4883f4948c5da66f044ed1941f93b89170e758d85580264eefd8e7",
-      "bytes": 3309
+      "sha256": "d0aaf393682316999b393df36b34d18bea36c3380d7587400d9b4e76d2978ca0",
+      "bytes": 9755
     },
     {
       "path": "skill/scripts/inspect.csx",
-      "sha256": "ee7dd99e4e1905c8b60664c42b48c4f23aece97a6f3f73ed695cb0957c49ad1a",
-      "bytes": 1332
+      "sha256": "f02a1f8c6db7a0c7dd2b1ed60e1cf1fda7af85d9b63ef6e5b4a3497c0d6734e6",
+      "bytes": 2228
     },
     {
       "path": "skill/scripts/list-templates.csx",
@@ -289,6 +319,11 @@
       "bytes": 1970
     },
     {
+      "path": "skill/scripts/regression-check.csx",
+      "sha256": "2bf88b069f2404b17553cf991c206a3e9e61ebf41202004ef7214248a3e3eda6",
+      "bytes": 5433
+    },
+    {
       "path": "skill/scripts/save-template.csx",
       "sha256": "f4f9ff50b33a1f69e5f78af7c2122eb47fe3f84274e06831e56ac41be72cbed6",
       "bytes": 1936
@@ -299,24 +334,29 @@
       "bytes": 2610
     },
     {
+      "path": "skill/scripts/survey.csx",
+      "sha256": "134f9b0c956f4f7e1530874f7bd0631ff38ddc4e9163d490d6d3b27cb8c38217",
+      "bytes": 3432
+    },
+    {
       "path": "skill/scripts/test-groups.csx",
-      "sha256": "71db4230f994a9946d3c62628aa2880562e0590262095fac6655500122e94ead",
-      "bytes": 1445
+      "sha256": "e9d3814d30b5f92d1eb1787ebdedfb100ac87be7c1beac3d645922399f6ece0f",
+      "bytes": 2727
     },
     {
       "path": "skill/scripts/test-pattern.csx",
-      "sha256": "b61b15f163c54d0a5331c72dbea0b388ac8c1353d1fc628f165d4adee7900b66",
-      "bytes": 1982
+      "sha256": "e901fd8ab5898241956432d3fa4a31c4d1ff8d3a8b05cae79e3421fe02cda9c0",
+      "bytes": 3068
     },
     {
       "path": "skill/scripts/validate-template.csx",
-      "sha256": "6c3db1bb1f7b0ceae5a546568b151fd16f80b3773cb1b840c01cc4f660ba4ab8",
-      "bytes": 1800
+      "sha256": "7ad2bd4b9d0e9daff16cac701b2c5f994fac4fa80f741357beb2643a40fbacb7",
+      "bytes": 2772
     },
     {
       "path": "skill/SKILL.md",
-      "sha256": "9f341be7cc9a5bacb2543700e9a51f5acfa14d52825d415b40e8ff8dc150b052",
-      "bytes": 5301
+      "sha256": "2e9c65302390510ce1250cae105beb6a812901e9ab0cdb839e1575b4ef665c44",
+      "bytes": 13364
     }
   ]
 }

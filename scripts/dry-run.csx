@@ -47,7 +47,17 @@ try
     {
         // Standard dry-run: extraction + transformation only.
         var result = await engine.DryRunAsync(pdf, template);
-        JsonOut.Write(new { kind = result.GetType().Name, result });
+        if (result is DryRunSucceeded drySucceeded)
+        {
+            var completeness = drySucceeded.Completeness;
+            JsonOut.Write(new { kind = result.GetType().Name, result, completeness });
+            if (!completeness.IsComplete)
+                Environment.Exit(2);
+        }
+        else
+        {
+            JsonOut.Write(new { kind = result.GetType().Name, result });
+        }
     }
     else
     {

@@ -20,10 +20,12 @@ using System;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Docuoria.Contracts;
+using Docuoria.Output.Ledger;
 using Docuoria.Registration;
 using Docuoria.Serialization;
 using Docuoria.Storage;
@@ -247,4 +249,124 @@ public static FileStream LoadPdf(string path)
         JsonOut.Error("pdf-not-found", $"PDF not found at '{path}'", null, 1);
     }
     return new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+}
+
+/// <summary>
+/// File I/O and arg plumbing for export ledgers (recurring-export-ledgers). The merge
+/// semantics live in the SDK (`Docuoria.Output.Ledger`); this class owns the parts the
+/// SDK deliberately does not: reading existing files, atomic writes, and CLI policy args.
+/// </summary>
+public static class LedgerIo
+{
+    /// <summary>Ledger files are UTF-8 without BOM, matching <c>CsvGeneratorOptions</c> defaults.</summary>
+    public static readonly Encoding Utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+
+    /// <summary>
+    /// Parses <c>--on-duplicate</c> (skip | replace | fail; default skip). Emits
+    /// <c>bad-on-duplicate</c> and exits 2 on any other value.
+    /// </summary>
+    public static DuplicateSourcePolicy ParseDuplicatePolicy(IList<string> args)
+    {
+        var raw = Cli.Get(args, "on-duplicate");
+        if (raw is null) return DuplicateSourcePolicy.Skip;
+        switch (raw.Trim().ToLowerInvariant())
+        {
+            case "skip": return DuplicateSourcePolicy.Skip;
+            case "replace": return DuplicateSourcePolicy.Replace;
+            case "fail": return DuplicateSourcePolicy.Fail;
+            default:
+                JsonOut.Error("bad-on-duplicate",
+                    $"--on-duplicate must be skip, replace, or fail (got '{raw}')", null, 2);
+                return default; // unreachable
+        }
+    }
+
+    /// <summary>
+    /// Reads and parses an existing CSV ledger at <paramref name="path"/>; a missing file is an
+    /// empty ledger (create-or-extend). Unrecognized content emits <c>not-a-ledger</c> and exits 1
+    /// without touching the file.
+    /// </summary>
+    public static CsvLedger ReadCsvLedger(string path)
+    {
+        if (!File.Exists(path)) return CsvLedger.CreateEmpty();
+        var content = File.ReadAllText(path);
+        if (!CsvLedger.TryParse(content, out var ledger, out var error))
+        {
+            JsonOut.Error("not-a-ledger",
+                $"'{path}' exists but is not a recognizable CSV ledger - refusing to touch it.",
+                $"{error}. If it is a JSON ledger, pass --format json; otherwise point --output at a new path.", 1);
+        }
+        return ledger!;
+    }
+
+    /// <summary>JSON counterpart of <see cref="ReadCsvLedger"/>.</summary>
+    public static JsonLedger ReadJsonLedger(string path)
+    {
+        if (!File.Exists(path)) return JsonLedger.CreateEmpty();
+        var content = File.ReadAllText(path);
+        if (!JsonLedger.TryParse(content, out var ledger, out var error))
+        {
+            JsonOut.Error("not-a-ledger",
+                $"'{path}' exists but is not a recognizable JSON ledger - refusing to touch it.",
+                $"{error}. If it is a CSV ledger, pass --format csv; otherwise point --output at a new path.", 1);
+        }
+        return ledger!;
+    }
+
+    /// <summary>
+    /// True when the file exists with non-whitespace content recognized as a Docuoria ledger of
+    /// either format. Used by non-append writes to refuse flattening an accumulating file.
+    /// </summary>
+    public static bool IsRecognizedLedger(string path, out IReadOnlyList<string> recordedSources)
+    {
+        recordedSources = Array.Empty<string>();
+        if (!File.Exists(path)) return false;
+        string content;
+        try { content = File.ReadAllText(path); }
+        catch { return false; }
+        if (string.IsNullOrWhiteSpace(content)) return false;
+
+        if (CsvLedger.TryParse(content, out var csv, out _))
+        {
+            recordedSources = csv!.SourceFiles;
+            return true;
+        }
+        if (JsonLedger.TryParse(content, out var json, out _))
+        {
+            recordedSources = json!.SourceFiles;
+            return true;
+        }
+        return false;
+    }
+
+    /// <summary>
+    /// Writes ledger text atomically: temp file in the target directory, then replace. A crash
+    /// mid-write leaves the original file intact.
+    /// </summary>
+    public static void WriteAtomic(string path, string content)
+    {
+        var full = Path.GetFullPath(path);
+        var dir = Path.GetDirectoryName(full);
+        if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+        var tmp = Path.Combine(string.IsNullOrEmpty(dir) ? "." : dir!,
+            $".{Path.GetFileName(full)}.tmp-{Guid.NewGuid():N}");
+        try
+        {
+            File.WriteAllText(tmp, content, Utf8NoBom);
+            File.Move(tmp, full, overwrite: true);
+        }
+        catch
+        {
+            try { if (File.Exists(tmp)) File.Delete(tmp); } catch { /* best effort */ }
+            throw;
+        }
+    }
+
+    /// <summary>Maps a merge action to the envelope vocabulary (appended / replaced / skipped-duplicate).</summary>
+    public static string ActionLabel(LedgerMergeAction action) => action switch
+    {
+        LedgerMergeAction.Appended => "appended",
+        LedgerMergeAction.Replaced => "replaced",
+        _ => "skipped-duplicate",
+    };
 }

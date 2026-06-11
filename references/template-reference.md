@@ -4,6 +4,23 @@ Complete reference for authoring `Docuoria` template JSON files. Every property 
 
 > **Important:** `fieldType` serializes as an **integer** (0–5), not a string. **Match rule** enums (`TextPatternMatchRule.mode`, `FileNameMatchRule.mode`, `CompositeMatchRule.operator`) also serialize as **integers**. **Extraction source** enums (`TextPatternExtractionSource.mode`, `TableRowsExtractionSource.mode`, `MetadataFieldExtractionSource.standardField`) serialize as **strings** (handled by a custom converter). All field mappings require a `$kind` discriminator (`"FieldMapping"` or `"RepeatingFieldMapping"`). See the [Enum Reference](#enum-reference) section for the canonical values.
 
+## Contents
+
+- [Minimal template (single scalar field)](#minimal-template-single-scalar-field) — copy-paste starting point
+- [Complex template (scalars + repeating collection)](#complex-template-scalar-fields--repeating-collection)
+- [Top-level template structure](#top-level-template-structure)
+- [Extraction step structure](#extraction-step-structure) — `mappings` and `requirements`
+- [`RepeatingFieldMapping` — `expectedRows`](#repeatingfieldmapping--expectedrows-property)
+- [Extraction source types](#extraction-source-types-kind-discriminator) — per-`$kind` property tables
+- [Field mapping types](#field-mapping-types) — `FieldMapping` and `RepeatingFieldMapping`
+- [Sub-field mapping types](#sub-field-mapping-types-kind-discriminator)
+- [Match rule types](#match-rule-types-kind-discriminator)
+- [Enum reference](#enum-reference) — `FieldType`, modes, operators, orientation, metadata fields, severity
+- [Field definition types](#field-definition-types-kind-discriminator)
+- [FieldType coercion behavior](#fieldtype-coercion-behavior)
+- [CSV output behavior](#csv-output-behavior)
+- [JSON Schema](#json-schema)
+
 ---
 
 ## Minimal template (single scalar field)
@@ -210,9 +227,56 @@ Complete reference for authoring `Docuoria` template JSON files. Every property 
 | `identifier` | string | yes | Unique template ID (min 1 char) |
 | `rootMatchRule` | object | yes | Gates template execution; uses `$kind` discriminator |
 | `dataModel` | object | yes | Output schema definition with `schema` property |
-| `extractionStep` | object | yes | Contains `mappings` array of field extraction declarations |
+| `extractionStep` | object | yes | Contains `mappings` array of field extraction declarations, and optional `requirements` |
 | `intermediateSteps` | array | no | Ordered transformation steps (may be empty `[]`) |
 | `publishStep` | object | yes | Publish step configuration (can be empty `{}`) |
+
+---
+
+## Extraction step structure
+
+| Property | Type | Required | Description |
+|---|---|---|---|
+| `mappings` | array | yes | Field mapping declarations (`FieldMapping` or `RepeatingFieldMapping`) |
+| `requirements` | array | no | Extraction requirements; omit or set to `[]` when not needed |
+
+### `requirements` — extraction requirement kinds
+
+Requirements are evaluated after extraction and gate the template's classification. A template with any unsatisfied requirement is excluded from `classify.csx` results and reports `classificationScore = 0`. All four kinds use the `$kind` discriminator.
+
+| `$kind` | Properties | Meaning |
+|---|---|---|
+| `MinMatches` | `mapping` (string), `count` (int ≥ 1) | The named mapping must produce ≥ `count` matches |
+| `MinRows` | `collection` (string), `count` (int ≥ 1) | The named `RepeatingFieldMapping` collection must have ≥ `count` rows |
+| `RequiredFields` | `fields` (string[]) | Each listed mapping must have ≥ 1 match |
+| `MustBeAbsent` | `mapping` (string) | The named mapping must have 0 matches (presence disqualifies) |
+
+`mapping` / `collection` / `fields` values must match declared mapping names in the same `extractionStep.mappings[]`. `validate-template.csx` enforces this — a `TPL_FIELD_REFERENCE` error is emitted for any unknown reference.
+
+**Example — require ≥ 1 line-item row and disallow credit-note reference:**
+```json
+{
+  "requirements": [
+    { "$kind": "MinRows", "collection": "lineItems", "count": 1 },
+    { "$kind": "MustBeAbsent", "mapping": "creditNoteRef" }
+  ]
+}
+```
+
+---
+
+## `RepeatingFieldMapping` — `expectedRows` property
+
+`RepeatingFieldMapping` accepts an optional `expectedRows` integer (≥ 1) that scales the `matchQuantityScore` component of `classificationScore`. When set, the score is `min(actualRows / expectedRows, 1.0)` instead of a log-scaled heuristic. Use it when the expected row count for the document type is well-known.
+
+```json
+{
+  "$kind": "RepeatingFieldMapping",
+  "collectionFieldName": "lineItems",
+  "expectedRows": 5,
+  ...
+}
+```
 
 ---
 
@@ -256,12 +320,12 @@ Complete reference for authoring `Docuoria` template JSON files. Every property 
 | `pageNumber` | integer (1-based) | no | `null` | Restrict to a single page |
 | `caseSensitive` | boolean | no | `false` | Case-sensitive matching |
 
-**PdfBounds** (nested object):
+**PdfBounds** (nested object) — origin is the page's top-left corner; units are PDF points (1/72"):
 
 | Property | Type | Description |
 |---|---|---|
-| `left` | number | Left edge in PDF points |
-| `top` | number | Top edge in PDF points |
+| `x` | number | Left edge in PDF points |
+| `y` | number | Top edge in PDF points |
 | `width` | number | Width in PDF points |
 | `height` | number | Height in PDF points |
 
@@ -476,6 +540,18 @@ All match rules share: `threshold` (number, 0–1, default 0.5).
 
 > **Common mistake:** Writing `"fieldType": "String"` instead of `"fieldType": 0`. The string form will fail with a `JsonException` during `Template.FromJson()`.
 
+> **Prefer `4` (Date) for SCALAR date fields** (`FieldMapping` + `parseFormat`):
+> typed dates publish as ISO `yyyy-MM-dd`, which sorts and pivots correctly.
+> Determine `parseFormat` empirically from the haystack (find an unambiguous
+> day > 12), never from the file name.
+> **Scope limit — collection sub-fields:** this preference applies to scalar
+> mappings only. For dates inside `RepeatingFieldMapping` sub-fields, keep
+> `fieldType: 0` (String) and capture the date as printed — do NOT split the date
+> into day/month/year groups or engineer transform chains to recompose ISO inside
+> collections; that costs many iterations for a cosmetic gain and is not supported
+> as a first-class path. As-printed date strings in collection cells are correct
+> output.
+
 ### `TextPatternExtractionSource.mode`
 
 Serializes as **string**.
@@ -536,13 +612,15 @@ Serializes as **string**.
 | `"CreationDate"` | Creation date |
 | `"ModifiedDate"` | Last modified date |
 
-### `ValidationSeverity` (in validation errors)
+### `ValidationSeverity` (in `validate-template.csx` errors)
 
-| Value | Description |
-|---|---|
-| `"Info"` | Informational only |
-| `"Warning"` | Non-blocking concern |
-| `"Error"` | Blocking issue |
+**Serializes as integer.**
+
+| Integer | Name | Description |
+|---|---|---|
+| `0` | Info | Informational only |
+| `1` | Warning | Non-blocking concern (e.g. `TPL_DISCRIMINATOR_FROM_VALUE`) |
+| `2` | Error | Blocking issue — equals `RejectionReason.MalformedTemplate` at runtime |
 
 ---
 
@@ -555,8 +633,14 @@ Serializes as **string**.
 | `$kind` | `"PrimitiveFieldDefinition"` | yes | — | Discriminator |
 | `name` | string | yes | — | Field name |
 | `fieldType` | integer | no | `0` (String) | See [FieldType enum](#fieldtype) |
-| `isRequired` | boolean | no | `false` | Whether the field must have a value |
+| `isRequired` | boolean | no | **`true`** | Whether the field must have a value |
 | `isCollection` | boolean | no | `false` | Whether this is a collection of primitives |
+
+> **Warning:** when `isRequired` is omitted it defaults to **`true`** — including on
+> collection **element** fields. The publish step rejects the record when any required
+> field (e.g. `charges[0].taxRate`) has a null value; both `dry-run.csx` and
+> `execute.csx` surface this as a Publish-step failure. Set `"isRequired": false`
+> explicitly for fields the document legitimately omits.
 
 > **Note:** `parseFormat` and `cultureName` belong on the **field mapping** (in `extractionStep.mappings`), not on the field definition (in `dataModel.schema.fields`). See [Scalar field mapping](#scalar-field-mapping-fieldmapping).
 
@@ -566,7 +650,7 @@ Serializes as **string**.
 |---|---|---|---|---|
 | `$kind` | `"RecordFieldDefinition"` | yes | — | Discriminator |
 | `name` | string | yes | — | Field name |
-| `isRequired` | boolean | no | `false` | Whether the record must be present |
+| `isRequired` | boolean | no | **`true`** | Whether the record must be present |
 | `isCollection` | boolean | no | `false` | Set `true` for repeating data (e.g. line items) |
 | `record` | RecordDefinition | yes | — | Nested record schema (with `name` and `fields`) |
 
@@ -585,7 +669,7 @@ When the engine extracts a string value and the `fieldType` specifies a non-Stri
 | `4` (Date) | Parse as DateOnly | Yes, if non-ISO | `"05/26/2026"` with `"parseFormat": "MM/dd/yyyy"` → `2026-05-26` |
 | `5` (Timestamp) | Parse as DateTime (UTC) | Yes, if non-ISO | `"2026-05-26T14:30:00Z"` → `2026-05-26T14:30:00.0000000Z` |
 
-When coercion fails, the engine produces a `FailedResult` with `Step = "FieldCoercion"` and structured diagnostics including `FieldPath`, `SourceText`, and `TargetTypeName`.
+When coercion fails, the engine produces a `FailedResult` (or `DryRunFailed`) whose `step` integer identifies the failing pipeline step, with structured diagnostics: `fieldPath`, `sourceText` (the raw text, truncated to 256 chars), and `targetTypeName`. See [`troubleshooting.md`](troubleshooting.md) for routing.
 
 ---
 

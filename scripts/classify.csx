@@ -3,11 +3,11 @@
 #nullable enable
 
 // CLS-02 — ranked classification: evaluates every stored template and returns top matches
-// sorted by effective confidence (ruleConfidence × extractionProbeScore, descending).
+// sorted by ClassificationScore (descending), with full score breakdown.
 // Uses ClassifyRankedAsync to open the PDF once and evaluate all templates without
 // redundant PDF parsing per template.
 // Args: --pdf <path> [--top N]
-// stdout: { matches: [ { templateId, confidence }, ... ] }
+// stdout: { matches: [ { templateId, classificationScore, requirementsSatisfied, specificityScore, matchQuantityScore, coverageScore, ruleConfidence }, ... ] }
 
 using Docuoria.Contracts;
 using Docuoria.Storage;
@@ -37,7 +37,19 @@ try
         .Select(c => new
         {
             templateId = c.TemplateIdentifier,
-            confidence = Math.Round(c.RuleConfidence * c.ExtractionProbeScore, 4),
+            recommendation = c.Recommendation switch
+            {
+                Docuoria.Results.ClassificationRecommendation.Strong => "strong",
+                Docuoria.Results.ClassificationRecommendation.Partial => "partial",
+                _ => "no-match",
+            },
+            classificationScore = Math.Round(c.ClassificationScore, 4),
+            requirementsSatisfied = c.RequirementsSatisfied,
+            specificityScore = Math.Round(c.SpecificityScore, 4),
+            matchQuantityScore = Math.Round(c.MatchQuantityScore, 4),
+            coverageScore = Math.Round(c.CoverageScore, 4),
+            ruleConfidence = Math.Round(c.RuleConfidence, 4),
+            ambiguity = c.Ambiguity,
         })
         .ToArray();
 

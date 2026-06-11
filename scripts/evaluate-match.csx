@@ -6,7 +6,7 @@
 // Args: --pdf <path> --template <id-or-file>
 // Auto-detects template source per Area-3: contains path sep OR ends .json OR File.Exists -> file;
 // otherwise loads from store via ITemplateStoreProvider.LoadAsync(value).
-// stdout: { confidence, matchedRules } JSON.
+// stdout: { isMatch, classificationScore, requirementsSatisfied, specificityScore, matchQuantityScore, coverageScore, ruleConfidence, requirements, matchedRules } JSON.
 
 using Docuoria.Contracts;
 using Docuoria.Models;
@@ -58,12 +58,25 @@ try
     using var pdf = LoadPdf(pdfPath);
     var evaluation = await engine.EvaluateMatchAsync(template!, pdf);
 
-    // Project a clean LLM-facing response: single aggregated confidence + diagnostic rules.
-    // Confidence = ruleConfidence × extractionProbeScore (0.0 when either fails).
+    // Project a clean LLM-facing response with full score breakdown and per-requirement results.
     JsonOut.Write(new
     {
-        confidence = Math.Round(evaluation.RuleConfidence * evaluation.ExtractionProbeScore, 4),
+        isMatch = evaluation.IsMatch,
+        recommendation = evaluation.Recommendation switch
+        {
+            Docuoria.Results.ClassificationRecommendation.Strong => "strong",
+            Docuoria.Results.ClassificationRecommendation.Partial => "partial",
+            _ => "no-match",
+        },
+        classificationScore = Math.Round(evaluation.ClassificationScore, 4),
+        requirementsSatisfied = evaluation.RequirementsSatisfied,
+        specificityScore = Math.Round(evaluation.SpecificityScore, 4),
+        matchQuantityScore = Math.Round(evaluation.MatchQuantityScore, 4),
+        coverageScore = Math.Round(evaluation.CoverageScore, 4),
+        ruleConfidence = Math.Round(evaluation.RuleConfidence, 4),
+        requirements = evaluation.RequirementResults,
         matchedRules = evaluation.MatchedRules,
+        ambiguity = evaluation.Ambiguity,
     });
 }
 catch (Exception ex)

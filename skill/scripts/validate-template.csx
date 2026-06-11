@@ -30,6 +30,15 @@ try
     catch (JsonException jex)
     {
         var message = jex.Message;
+
+        // Polymorphic discriminator failures (missing/unknown $kind) carry their own enumerated,
+        // non-leaking detail from the SDK (D8) — surface it verbatim as the bad-format detail.
+        if (message.Contains("Valid '$kind' values are", StringComparison.Ordinal))
+        {
+            JsonOut.Error("bad-format", "Template '$kind' discriminator is invalid.", message, 1);
+            return;
+        }
+
         var hint = (string?)null;
 
         // Detect fieldType string-vs-integer errors and add a helpful hint.
@@ -41,12 +50,20 @@ try
                  + "Do NOT use string values like \"String\" or \"Number\".";
         }
 
+        // Detect unknown requirement $kind discriminator errors.
+        if (hint is null && message.Contains("$kind", StringComparison.OrdinalIgnoreCase))
+        {
+            hint = "Requirement $kind must be one of: MinMatches, MinRows, RequiredFields, MustBeAbsent.";
+        }
+
         JsonOut.Error("parse-error", hint is not null ? $"{message} — Hint: {hint}" : message, null, 1);
         return;
     }
 
-    var errors = tpl.Validate();
-    JsonOut.Write(new { valid = errors.Count == 0, errors });
+    var validationResults = tpl.Validate();
+    var hasErrors = validationResults.Any(e => e.Severity == Docuoria.Models.ValidationSeverity.Error);
+    var hasWarnings = validationResults.Any(e => e.Severity == Docuoria.Models.ValidationSeverity.Warning);
+    JsonOut.Write(new { valid = !hasErrors, hasWarnings, errors = validationResults });
 }
 catch (Exception ex)
 {

@@ -177,9 +177,59 @@
               { "$ref": "#/$defs/RepeatingFieldMapping" }
             ]
           }
+        },
+        "requirements": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/ExtractionRequirement" }
         }
       },
       "additionalProperties": true
+    },
+    "ExtractionRequirement": {
+      "oneOf": [
+        { "$ref": "#/$defs/MinMatchesRequirement" },
+        { "$ref": "#/$defs/MinRowsRequirement" },
+        { "$ref": "#/$defs/RequiredFieldsRequirement" },
+        { "$ref": "#/$defs/MustBeAbsentRequirement" }
+      ]
+    },
+    "MinMatchesRequirement": {
+      "type": "object",
+      "required": ["$kind", "mapping", "count"],
+      "properties": {
+        "$kind": { "const": "MinMatches" },
+        "mapping": { "type": "string", "minLength": 1 },
+        "count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "MinRowsRequirement": {
+      "type": "object",
+      "required": ["$kind", "collection", "count"],
+      "properties": {
+        "$kind": { "const": "MinRows" },
+        "collection": { "type": "string", "minLength": 1 },
+        "count": { "type": "integer", "minimum": 1 }
+      },
+      "additionalProperties": false
+    },
+    "RequiredFieldsRequirement": {
+      "type": "object",
+      "required": ["$kind", "fields"],
+      "properties": {
+        "$kind": { "const": "RequiredFields" },
+        "fields": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1 }
+      },
+      "additionalProperties": false
+    },
+    "MustBeAbsentRequirement": {
+      "type": "object",
+      "required": ["$kind", "mapping"],
+      "properties": {
+        "$kind": { "const": "MustBeAbsent" },
+        "mapping": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false
     },
     "FieldMapping": {
       "type": "object",
@@ -205,7 +255,8 @@
         "subFields": {
           "type": "array",
           "items": { "$ref": "#/$defs/SubFieldMapping" }
-        }
+        },
+        "expectedRows": { "type": "integer", "minimum": 1 }
       },
       "additionalProperties": true
     },

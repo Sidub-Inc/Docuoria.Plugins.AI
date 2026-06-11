@@ -30,7 +30,7 @@ Note: `fieldType` is an **integer** (0 = String, 1 = Number, 4 = Date). See the 
 
 1. `dotnet script scripts/list-templates.csx -- --store-path ./templates` — find the template ID that should apply.
 2. `dotnet script scripts/load-template.csx -- --id <id> --store-path ./templates` — confirm the template loaded and inspect its fields. Add `--output <path>` to write the JSON to a file.
-3. `dotnet script scripts/dry-run.csx -- --pdf <pdf> --template <template.json>` — confirm a `DryRunSucceeded` outcome. Inspect the extracted fields and (if needed) the `ExtractionDiagnostics` snapshot before publishing.
+3. `dotnet script scripts/dry-run.csx -- --pdf <pdf> --template <template.json>` — confirm a `DryRunSucceeded` outcome and `completeness.isComplete: true`. Inspect the extracted fields and the diagnostics snapshot before publishing.
 4. `dotnet script scripts/execute.csx -- --pdf <pdf> --template <template.json> --format csv --output output.csv` — runs the full pipeline through the registered CSV generator. Engine API used: `IDocuoriaEngine.ExecuteTemplateAsync<CsvOutputGenerator, CsvGeneratorOptions>`.
 
 ## Expected outcome
@@ -39,7 +39,7 @@ Note: `fieldType` is an **integer** (0 = String, 1 = Number, 4 = Date). See the 
 
 ## If it fails
 
-Go to [`../references/failure-tree.md`](../references/failure-tree.md). Map the script's stderr `error.code` to a branch via [§ Stderr error.code → Branch routing](../references/failure-tree.md#stderr-errorcode--branch-routing): `rejected` → Branch A (read `RejectionReason` in `detail`); `failed` → Branch B (read `StepIdentifier` in `detail`). If `dry-run.csx` already returned `DryRunSucceeded` but `execute.csx` then returned `rejected` with `RejectionReason.GeneratorRejected`, the generator is rejecting the shape — Branch A's `GeneratorRejected` row covers the remediation.
+Go to [`../references/troubleshooting.md`](../references/troubleshooting.md). Map the script's stderr `error.code` to a branch via [§ Error-code routing](../references/troubleshooting.md#error-code-routing): `rejected` → [Branch A](../references/troubleshooting.md#branch-a--rejectedresult) (read `reason` in `detail`); `failed` → [Branch B](../references/troubleshooting.md#branch-b--failedresult) (read `step` in `detail`). If `dry-run.csx` already returned `DryRunSucceeded` but `execute.csx` then returned `rejected` with `reason 3` (GeneratorRejected), the generator is rejecting the shape — Branch A's GeneratorRejected row covers the remediation (two or more collections need JSON, not CSV).
 
 ## See also
 
