@@ -1,27 +1,27 @@
 {
   "package": "docuoria",
-  "version": "1.0.40",
-  "builtAt": "2026-06-11T03:37:24.2365959Z",
+  "version": "1.0.49",
+  "builtAt": "2026-06-12T02:55:10.5325801Z",
   "sdk": {
     "assembly": "Docuoria.dll",
-    "fileVersion": "1.0.40.0",
-    "informationalVersion": "1.0.40+Branch.main.Sha.d18f177d03bfe44361eae83756cc6e2450f74e16.d18f177d03bfe44361eae83756cc6e2450f74e16"
+    "fileVersion": "1.0.49.0",
+    "informationalVersion": "1.0.49+Branch.main.Sha.1c6513cdc39911847ed0ce71d730619dfcd5108f.1c6513cdc39911847ed0ce71d730619dfcd5108f"
   },
   "files": [
     {
       "path": ".claude-plugin/plugin.json",
-      "sha256": "42dc91581fb9501906fc21be6b5a1ddd7cb627d46e6c1fa6ca43371a7d7f8324",
+      "sha256": "81b8aa6365d0915a8c7ff9fe34444b3846746ac9d05aa369d7f19e779287e567",
       "bytes": 632
     },
     {
       "path": "assets/lib/Docuoria.dll",
-      "sha256": "05a9e8adf41214b504b1eca65d1c39cd8229a3493f087138dd27aea8d66bb8b9",
+      "sha256": "352160b122b5aaf0a22384222dca5e99d5d1c49ac760a7dc17a9a2d471e1d993",
       "bytes": 374272
     },
     {
       "path": "assets/schemas/template-schema.json",
-      "sha256": "bd6b55f9d76899f904031467fa21282d44a03d5bcb1aab0b1d9ce55999c268dd",
-      "bytes": 17100
+      "sha256": "ac128d6d31f511ce2a2a3e0d6ce2d6bb00e290ae2a7df34846e3f5b6fa89cd4d",
+      "bytes": 17090
     },
     {
       "path": "commands/classify.md",
@@ -200,13 +200,13 @@
     },
     {
       "path": "skill/assets/lib/Docuoria.dll",
-      "sha256": "05a9e8adf41214b504b1eca65d1c39cd8229a3493f087138dd27aea8d66bb8b9",
+      "sha256": "352160b122b5aaf0a22384222dca5e99d5d1c49ac760a7dc17a9a2d471e1d993",
       "bytes": 374272
     },
     {
       "path": "skill/assets/schemas/template-schema.json",
-      "sha256": "bd6b55f9d76899f904031467fa21282d44a03d5bcb1aab0b1d9ce55999c268dd",
-      "bytes": 17100
+      "sha256": "ac128d6d31f511ce2a2a3e0d6ce2d6bb00e290ae2a7df34846e3f5b6fa89cd4d",
+      "bytes": 17090
     },
     {
       "path": "skill/examples/01-extract-to-csv.md",

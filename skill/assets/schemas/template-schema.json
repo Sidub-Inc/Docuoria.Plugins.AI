@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.sidub.net/docuoria/template-schema.json",
-  "title": "Sidub PDF Pipeline Template",
+  "title": "Docuoria Template",
   "description": "JSON Schema (Draft 2020-12) for the Sidub Docuoria Template document. Polymorphic nodes carry a `$kind` discriminator whose value matches the corresponding CLR simple type name. This schema constrains structure only; deeper semantic checks (field references, regex validity, record cycles) are enforced by Template.Validate() at runtime.",
   "type": "object",
   "required": ["identifier", "rootMatchRule", "dataModel", "extractionStep", "publishStep"],

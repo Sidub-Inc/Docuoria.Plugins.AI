@@ -6,7 +6,7 @@ This repository distributes the **Docuoria AI Plugin** (`docuoria`), a skill
 package that enables AI agents to extract structured data from PDFs using
 template-driven pipelines.
 
-**Current version: 1.0.40**
+**Current version: 1.0.49**
 
 ---
 
@@ -16,7 +16,7 @@ The easiest way to install the Docuoria AI Plugin is with the CLI:
 
 ```bash
 # npm (Node.js ≥ 20)
-npm install -g @sidub/docuoria
+npm install -g @sidub-inc/docuoria.cli
 docuoria init
 
 # .NET global tool
@@ -56,7 +56,7 @@ git submodule add https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/s
 ### Pin to a specific version
 
 ```bash
-git clone --branch v1.0.40 --depth 1 \
+git clone --branch v1.0.49 --depth 1 \
   https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/skills/docuoria
 ```
 
@@ -81,10 +81,10 @@ automatically by `dotnet-script` on first run.
 | `SKILL.md` | Skill router — entry point auto-discovered by AI clients |
 | `.claude-plugin/plugin.json` | Claude Code plugin manifest |
 | `references/` | Deep-dive guides: workflow, patterns, classification, diagnostics |
-| `scripts/` | `dotnet-script` CLI surface (14 verb scripts) |
+| `scripts/` | `dotnet-script` CLI surface (15 verb scripts) |
 | `assets/lib/Docuoria.dll` | Bundled SDK assembly |
 | `assets/schemas/template-schema.json` | JSON Schema for template authoring and validation |
-| `examples/` | Three worked end-to-end walkthroughs |
+| `examples/` | Five worked end-to-end walkthroughs |
 | `MANIFEST.json` | Per-file SHA-256 integrity manifest |
 
 ---
@@ -129,5 +129,8 @@ for version history.
 
 ## License
 
-MIT — see the [source repository](https://github.com/Sidub-Inc/Docuoria) for
-full license text.
+**This plugin package is MIT** — install and use it freely. The Docuoria SDK
+assembly it bundles (`assets/lib/Docuoria.dll`) is dual-licensed (AGPLv3 or
+proprietary, including a free tier for personal and non-commercial use). See
+[LICENSE.txt](https://github.com/Sidub-Inc/Docuoria/blob/main/LICENSE.txt) in
+the source repository.
