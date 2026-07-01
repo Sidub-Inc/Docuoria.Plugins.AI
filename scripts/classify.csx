@@ -61,5 +61,5 @@ try
 }
 catch (Exception ex)
 {
-    JsonOut.Error("unhandled", ex.Message, ex.ToString(), 1);
+    JsonOut.Fail(ex);
 }

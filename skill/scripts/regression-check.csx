@@ -73,6 +73,12 @@ try
     using var host = ScriptHost.CreateHost(Args.ToArray(), includeStore: true);
     var engine = ScriptHost.GetEngine(host);
 
+    // Regression runs are metered (1 unit per run). Enforcement lives in the SDK guard;
+    // over-limit surfaces as the deterministic DOCUORIA_RATE_LIMIT:regression-check envelope
+    // via JsonOut.Fail.
+    await ScriptHost.GetLicenseGuard(host)
+        .AssertAndRecordAsync(Docuoria.Licensing.DocuoriaFeatures.RegressionCheck, 1);
+
     // Resolve baseline template.
     Template? baseline;
     if (!string.IsNullOrWhiteSpace(baselinePath))
@@ -131,5 +137,5 @@ try
 }
 catch (Exception ex)
 {
-    JsonOut.Error("unhandled", ex.Message, ex.ToString(), 1);
+    JsonOut.Fail(ex);
 }

@@ -231,6 +231,12 @@ try
     using var host = ScriptHost.CreateHost(Args.ToArray(), includeStore: true);
     var engine = ScriptHost.GetEngine(host);
 
+    // Batch runs are metered (1 unit per run, on top of the per-PDF execute metering the SDK
+    // records inside ExecuteTemplateAsync). Enforcement lives in the SDK guard; over-limit
+    // surfaces as the deterministic DOCUORIA_RATE_LIMIT:batch-execute envelope via JsonOut.Fail.
+    await ScriptHost.GetLicenseGuard(host)
+        .AssertAndRecordAsync(Docuoria.Licensing.DocuoriaFeatures.BatchExecute, 1);
+
     var entries = new List<BatchPdfEntry>();
     var mergeOptions = new LedgerMergeOptions { DuplicatePolicy = onDuplicate, StrictHeader = strictHeader };
 
@@ -312,6 +318,10 @@ try
             {
                 case SucceededResult ok:
                 {
+                    // Ledger appends are metered (1 unit per row batch operation); enforcement lives in the SDK guard.
+                    await ScriptHost.GetLicenseGuard(host)
+                        .AssertAndRecordAsync(Docuoria.Licensing.DocuoriaFeatures.LedgerAppend, 1);
+
                     var payloadText = Encoding.UTF8.GetString(ok.Output.Payload.Span);
                     var merge = format == "csv"
                         ? csvLedgers[resolvedPath].Merge(fileName, top.TemplateIdentifier, payloadText, mergeOptions)
@@ -460,5 +470,5 @@ try
 }
 catch (Exception ex)
 {
-    JsonOut.Error("unhandled", ex.Message, ex.ToString(), 1);
+    JsonOut.Fail(ex);
 }

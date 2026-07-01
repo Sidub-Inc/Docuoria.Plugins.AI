@@ -49,6 +49,11 @@ try
     using var host = ScriptHost.CreateHost(Args.ToArray(), includeStore: true);
     var engine = ScriptHost.GetEngine(host);
 
+    // Corpus surveys are metered (1 unit per run). Enforcement lives in the SDK guard;
+    // over-limit surfaces as the deterministic DOCUORIA_RATE_LIMIT:survey envelope via JsonOut.Fail.
+    await ScriptHost.GetLicenseGuard(host)
+        .AssertAndRecordAsync(Docuoria.Licensing.DocuoriaFeatures.Survey, 1);
+
     var survey = new PdfCorpusSurvey(engine);
 
     SurveyResult result;
@@ -91,5 +96,5 @@ try
 }
 catch (Exception ex)
 {
-    JsonOut.Error("unhandled", ex.Message, ex.ToString(), 1);
+    JsonOut.Fail(ex);
 }

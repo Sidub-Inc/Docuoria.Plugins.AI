@@ -1,10 +1,11 @@
-#r "nuget: Microsoft.Extensions.Hosting, 10.0.0"
-#r "nuget: Microsoft.Extensions.DependencyInjection, 10.0.0"
-#r "nuget: Microsoft.Extensions.Http, 10.0.0"
+#r "nuget: Microsoft.Extensions.Hosting, 10.0.8"
+#r "nuget: Microsoft.Extensions.DependencyInjection, 10.0.8"
+#r "nuget: Microsoft.Extensions.Http, 10.0.8"
 #r "nuget: PdfPig, 0.1.14"
 #r "nuget: Tabula, 1.0.1"
 #r "nuget: CsvHelper, 33.1.0"
 #r "nuget: pythonnet, 3.0.5"
+#r "nuget: Sidub.Licensing.Client, 1.5.1"
 #r "../assets/lib/Docuoria.dll"
 
 #nullable enable
@@ -25,6 +26,7 @@ using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Docuoria.Contracts;
+using Docuoria.Licensing;
 using Docuoria.Output.Ledger;
 using Docuoria.Registration;
 using Docuoria.Serialization;
@@ -79,8 +81,51 @@ public static class ScriptHost
                 if (includeStore)
                     RegisterStore(b, args);
             });
+            // Licensing (distributed channel): enforce by default so the skill product gates
+            // features and surfaces the acquisition journey. DOCUORIA_ENFORCEMENT can override
+            // (e.g. Disabled for local development) and DOCUORIA_CHECKOUT_API_KEY enables
+            // self-serve checkout — both without recompiling. Enforcement logic lives in the SDK guard.
+            //
+            // The license lives BESIDE the skill (`<scripts-dir>/docuoria.license.json`), not in a
+            // machine-wide user-home file, so the skill is self-contained and the CLI tool is not a
+            // dependency. `license-set.csx` / `license-acquire.csx` write this file; the SDK reads it.
+            var skillLicensePath = ResolveSkillLicensePath();
+            services.AddDocuoriaLicensingForDistribution(o =>
+            {
+                if (skillLicensePath is not null)
+                    o.LicensePath = skillLicensePath;
+            });
         });
         return builder.Build();
+    }
+
+    /// <summary>
+    /// Absolute directory of this script library (where <c>_common.csx</c> lives) — the skill's
+    /// scripts directory at runtime. Captured at compile time via <c>[CallerFilePath]</c>; falls
+    /// back to the current directory when unavailable.
+    /// </summary>
+    public static string ScriptDirectory([System.Runtime.CompilerServices.CallerFilePath] string path = "")
+        => (!string.IsNullOrEmpty(path) && Path.GetDirectoryName(path) is { Length: > 0 } dir)
+            ? dir
+            : Directory.GetCurrentDirectory();
+
+    /// <summary>
+    /// Skill-local license file path (<c>&lt;scripts-dir&gt;/docuoria.license.json</c>). The SDK store
+    /// reads and writes here so the license travels with the skill install rather than a machine-wide
+    /// user-home file. Returns <see langword="null"/> when an explicit <c>DOCUORIA_HOME</c> is set
+    /// (the store resolves that itself); honors <c>DOCUORIA_LICENSE_PATH</c> for an explicit override.
+    /// The <c>DOCUORIA_LICENSE</c> environment variable still takes precedence over any file.
+    /// </summary>
+    public static string? ResolveSkillLicensePath()
+    {
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCUORIA_HOME")))
+            return null;
+
+        var explicitPath = Environment.GetEnvironmentVariable("DOCUORIA_LICENSE_PATH");
+        if (!string.IsNullOrWhiteSpace(explicitPath))
+            return explicitPath;
+
+        return Path.Combine(ScriptDirectory(), DocuoriaLicenseOptions.LicenseFileName);
     }
 
     public static IDocuoriaEngine GetEngine(IHost host)
@@ -88,6 +133,22 @@ public static class ScriptHost
 
     public static ITemplateStoreProvider? GetStore(IHost host)
         => host.Services.GetService<ITemplateStoreProvider>();
+
+    /// <summary>SDK license guard — used by the ledger-append metering call sites.</summary>
+    public static IDocuoriaLicenseGuard GetLicenseGuard(IHost host)
+        => host.Services.GetService<IDocuoriaLicenseGuard>() ?? NoOpLicenseGuard.Instance;
+
+    /// <summary>License status surface (license-status.csx).</summary>
+    public static IDocuoriaLicenseInfo GetLicenseInfo(IHost host)
+        => host.Services.GetRequiredService<IDocuoriaLicenseInfo>();
+
+    /// <summary>License key store (license-set.csx / license-remove.csx).</summary>
+    public static LicenseKeyStore GetLicenseStore(IHost host)
+        => host.Services.GetRequiredService<LicenseKeyStore>();
+
+    /// <summary>Free-tier acquisition service (license-acquire.csx).</summary>
+    public static IDocuoriaLicenseAcquisition GetLicenseAcquisition(IHost host)
+        => host.Services.GetRequiredService<IDocuoriaLicenseAcquisition>();
 
     private static void RegisterStore(IDocuoriaEngineBuilder builder, string[] args)
     {
@@ -235,6 +296,36 @@ public static class JsonOut
         Console.Error.WriteLine(json);
         Environment.Exit(exitCode);
         throw new InvalidOperationException("Environment.Exit returned unexpectedly.");
+    }
+
+    /// <summary>
+    /// Terminal failure mapper used by every script's outer catch. Docuoria license failures
+    /// carry deterministic message prefixes (DOCUORIA_LICENSE_REQUIRED:, DOCUORIA_FEATURE_DENIED:&lt;key&gt;,
+    /// DOCUORIA_RATE_LIMIT:&lt;key&gt;) so an agent reading stderr knows exactly what to tell the user.
+    /// Exit codes: 3 = license required (acquire or set a key), 1 = everything else.
+    /// </summary>
+    [DoesNotReturn]
+    public static void Fail(Exception ex)
+    {
+        switch (ex)
+        {
+            case DocuoriaLicenseRequiredException lre:
+                Error("license-required", lre.Message,
+                    "Run 'dotnet script scripts/license-acquire.csx -- --email <you>' for a free license, " +
+                    "or store an existing key with 'dotnet script scripts/license-set.csx -- --key <key>'.", 3);
+                break;
+            case DocuoriaFeatureDeniedException fde:
+                Error("feature-denied", fde.Message,
+                    $"The active license does not include '{fde.FeatureKey}'.", 1);
+                break;
+            case DocuoriaRateLimitException rle:
+                Error("rate-limit", rle.Message,
+                    $"The usage window for '{rle.FeatureKey}' is exhausted; it resets automatically.", 1);
+                break;
+            default:
+                Error("unhandled", ex.Message, ex.ToString(), 1);
+                break;
+        }
     }
 }
 

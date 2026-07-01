@@ -68,6 +68,22 @@ Store-aware scripts (`classify`, `evaluate-match`, `list-templates`, `load-templ
 | `save-template` | `save-template.csx -- --template <file> --store-path <abs-store-dir>` |
 | `survey` | `survey.csx -- --corpus <dir> --store-path <abs-store-dir>` |
 | `schema-info` | `schema-info.csx` (dumps every `$kind`, mode, and enum) |
+| `license-status` | `license-status.csx` (license state, features, usage) |
+| `license-acquire` | `license-acquire.csx -- --email <you>` (free license, stored automatically) |
+| `license-set` | `license-set.csx -- --key <key>` (store a pasted key — never echo it) |
+| `license-remove` | `license-remove.csx` (delete the stored key) |
+
+## Licensing
+
+Docuoria needs a (free) license once a credential is in play. If any command fails with a
+message starting `DOCUORIA_LICENSE_REQUIRED:` (error code `license-required`, **exit code
+3**), tell the user Docuoria needs a free license, offer `license-acquire.csx -- --email
+<them>`, or direct them to the marketplace URL and store a pasted key with
+`license-set.csx`. **Never echo or store the key anywhere except the local store.**
+`DOCUORIA_FEATURE_DENIED:<key>` / `DOCUORIA_RATE_LIMIT:<key>` mean the current license
+excludes that capability or its usage window is exhausted — point at the marketplace to
+upgrade. Full workflow, prefixes, and key-handling rules:
+[references/licensing.md](references/licensing.md).
 
 ## Template vocabulary (the menu)
 
@@ -108,6 +124,7 @@ Each concern has one authoritative owner. Consult it instead of relying on memor
 | Write, adapt, or debug a regex pattern | [references/patterns.md](references/patterns.md) |
 | Diagnose any failure â€” a symptom, error code, `RejectedResult`, `FailedResult`, or incomplete run | [references/troubleshooting.md](references/troubleshooting.md) |
 | Look up a script's flags, output envelope, or exit codes | [references/scripts.md](references/scripts.md) |
+| Handle a `DOCUORIA_LICENSE_REQUIRED:` / license failure, or manage the license key | [references/licensing.md](references/licensing.md) |
 | Confirm PDF processing is local/private | [references/privacy.md](references/privacy.md) |
 
 Worked end-to-end walkthroughs live in [examples/](examples/): extract to CSV, classify an unknown PDF, diagnose a `FailedResult`, survey a batch, and keep a recurring ledger across monthly runs.

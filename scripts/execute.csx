@@ -138,6 +138,11 @@ try
             var completeness = ok.Completeness;
             if (append)
             {
+                // Ledger appends are metered (1 unit per row batch operation). All enforcement
+                // semantics live in the SDK guard; pre-licensed behavior is unchanged.
+                await ScriptHost.GetLicenseGuard(host)
+                    .AssertAndRecordAsync(Docuoria.Licensing.DocuoriaFeatures.LedgerAppend, 1);
+
                 var payloadText = Encoding.UTF8.GetString(payload.Span);
                 var mergeOptions = new LedgerMergeOptions { DuplicatePolicy = onDuplicate, StrictHeader = strictHeader };
 
@@ -214,5 +219,5 @@ try
 }
 catch (Exception ex)
 {
-    JsonOut.Error("unhandled", ex.Message, ex.ToString(), 1);
+    JsonOut.Fail(ex);
 }

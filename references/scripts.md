@@ -40,6 +40,7 @@ loading, and JSON writers.
 - **Classification:** [`classify`](#classifycsx) · [`evaluate-match`](#evaluate-matchcsx)
 - **Template store:** [`list-templates`](#list-templatescsx) · [`load-template`](#load-templatecsx) · [`save-template`](#save-templatecsx)
 - **Batch & change safety:** [`survey`](#surveycsx) · [`regression-check`](#regression-checkcsx)
+- **Licensing:** [`license-status`](#license-statuscsx) · [`license-set`](#license-setcsx) · [`license-acquire`](#license-acquirecsx) · [`license-remove`](#license-removecsx) — see [Licensing & exit code 3](#licensing--exit-code-3)
 - [Internals — `_common.csx`](#internals--_commoncsx)
 
 ## Installation
@@ -90,7 +91,31 @@ location.
 
 Common `code` values: `pdf-not-found`, `parse-error`, `already-exists`, `no-store`,
 `unhandled`, `bad-format`, `pattern-timeout` (regex match exceeded the timeout on
-`test-pattern`/`test-groups` — see those scripts).
+`test-pattern`/`test-groups` — see those scripts), and the licensing codes
+`license-required` (exit 3), `feature-denied`, `rate-limit` — see
+[Licensing & exit code 3](#licensing--exit-code-3).
+
+## Licensing & exit code 3
+
+Docuoria enforces a (free) Monaiq license inside the SDK. Pre-licensed machines (no
+credential anywhere) behave exactly as before — enforcement activates as soon as a
+credential source exists (`DOCUORIA_LICENSE` environment variable or
+`~/.docuoria/license.json`, directory overridable via `DOCUORIA_HOME`).
+
+When an enforced operation runs without a valid license, the script exits with **code 3**
+and emits the error code `license-required`; the message carries the deterministic prefix
+`DOCUORIA_LICENSE_REQUIRED:`. Two other deterministic license failures exit 1:
+`feature-denied` (`DOCUORIA_FEATURE_DENIED:<featureKey>`) and `rate-limit`
+(`DOCUORIA_RATE_LIMIT:<featureKey>`).
+
+Remediation surface (mirrors `docuoria license <verb>` in the CLI):
+
+| Script | Purpose |
+| ------ | ------- |
+| `license-status.csx` | Report license state, features, and usage. Exit 0 even when unlicensed. |
+| `license-set.csx -- --key <key>` | Validate + store an encoded credential (never echoed back). |
+| `license-acquire.csx -- --email <you>` | Self-serve free license; stores the credential on success. |
+| `license-remove.csx` | Delete the locally stored key (env var is unaffected). |
 
 ---
 
@@ -548,6 +573,60 @@ dotnet script scripts/schema-info.csx
 ```
 
 ---
+
+## license-status.csx
+
+**Synopsis.** Report the Docuoria license state: licensed yes/no, credential source,
+license id, expiry, feature keys, and rate-limit windows.
+
+```powershell
+dotnet script scripts/license-status.csx
+```
+
+**Output.** `{ licensed, credentialPresent, credentialSource, licenseId, expiry, features,
+consumption: [{ featureKey, currentUsage, limit, windowSeconds }], marketplaceUrl, guidance }`.
+`currentUsage` is `null` when the installed client cannot report it. Exit 0 always —
+"unlicensed" is a reportable state, not an error.
+
+## license-set.csx
+
+**Synopsis.** Validate and store an encoded license credential at the local key store.
+The credential value is never echoed back; do not paste it anywhere else.
+
+```powershell
+dotnet script scripts/license-set.csx -- --key <encoded-credential>
+```
+
+**Output.** `{ status: "ok", stored: true, verified, licenseId, path, note }` — `verified`
+is `false` when the licensing service was unreachable (the key is still stored).
+**Errors.** `invalid-credential` (exit 2) when the key does not parse; nothing is stored.
+
+## license-acquire.csx
+
+**Synopsis.** Self-serve acquisition of the free Docuoria license for an email address.
+Free offerings complete inline and store the credential automatically.
+
+```powershell
+dotnet script scripts/license-acquire.csx -- --email you@example.com
+```
+
+**Output.** `{ status: "ok", stored: true, licenseId }` on success, or
+`{ status: "checkout-required", checkoutUrl }` when the offering needs browser checkout
+(complete it there, then use `license-set.csx`).
+**Errors.** `not-provisioned` (exit 1) when the catalog identifiers are not configured —
+fall back to the marketplace URL from `license-status.csx`; `acquire-failed` (exit 1)
+on provider-reported failure.
+
+## license-remove.csx
+
+**Synopsis.** Delete the locally stored license key. The `DOCUORIA_LICENSE` environment
+variable is read-only and unaffected.
+
+```powershell
+dotnet script scripts/license-remove.csx
+```
+
+**Output.** `{ status: "ok", removed, path, note }`.
 
 ## Internals — `_common.csx`
 
