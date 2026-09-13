@@ -8,4 +8,4 @@ Validate a template JSON file against the schema and report structural errors.
 dotnet script scripts/validate-template.csx -- --help
 ```
 
-Refer to `SKILL.md` for the full argument reference and worked examples.
+Refer to `references/scripts.md` for the full argument reference and worked examples.

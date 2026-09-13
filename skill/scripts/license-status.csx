@@ -27,15 +27,18 @@ try
         consumption = status.Consumption.Select(c => new
         {
             featureKey = c.FeatureKey,
-            currentUsage = c.CurrentUsage >= 0 ? (long?)c.CurrentUsage : null,
+            currentUsage = c.CurrentUsage,
             limit = c.Limit,
+            unlimited = c.Limit == 0,
             windowSeconds = c.WindowSeconds,
+            percentage = c.Percentage,
         }),
         marketplaceUrl = status.MarketplaceUrl,
+        purchaseUrl = status.PurchaseUrl,
         guidance = status.IsLicensed
             ? null
-            : "Get a free license with 'dotnet script scripts/license-acquire.csx -- --email <you>', " +
-              $"or browse {status.MarketplaceUrl} and store the key with 'dotnet script scripts/license-set.csx -- --key <key>'.",
+            : "Get a free license with 'dotnet script scripts/license-acquire.csx', " +
+              $"or get one at {status.PurchaseUrl} and store it with 'dotnet script scripts/license-set.csx -- --key <key>'.",
     });
 }
 catch (Exception ex)

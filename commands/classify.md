@@ -8,4 +8,4 @@ Match a PDF against all templates in the store and report which template applies
 dotnet script scripts/classify.csx -- --help
 ```
 
-Refer to `SKILL.md` for the full argument reference and worked examples.
+Refer to `references/scripts.md` for the full argument reference and worked examples.

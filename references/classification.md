@@ -1,4 +1,4 @@
-﻿# Classification rule design
+# Classification rule design
 
 The `rootMatchRule` determines whether a template is eligible for a given PDF. A weak rule produces false positives -- the template classifies documents it cannot extract from, causing silent failures (empty collections, wrong data). This guide shows how to design discriminating rules that match ONLY the documents the template can actually handle.
 

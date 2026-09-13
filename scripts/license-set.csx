@@ -5,7 +5,10 @@
 // LIC — store an encoded license credential, mirrors `docuoria license set`.
 // Args: --key <encoded-credential>
 // The credential value is NEVER echoed back or logged; it is stored only in the local
-// key store (~/.docuoria/license.json, honoring DOCUORIA_HOME).
+// key store: the skill-local file beside these scripts (`<scripts-dir>/docuoria.license.json`),
+// or `%DOCUORIA_HOME%/license.json` when DOCUORIA_HOME is set. The SDK also reads the user-home
+// `~/.docuoria/license.json` as a fallback, so a key stored by `docuoria license acquire` is
+// picked up here without re-entering it.
 // stdout: { status: "ok", stored: true, verified, path }
 
 try

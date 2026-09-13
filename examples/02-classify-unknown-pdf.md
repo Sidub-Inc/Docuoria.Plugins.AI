@@ -76,7 +76,8 @@ The first child is a broad gate (must be a Microsoft Invoice). The second child 
 2. **Interpret the results:** map the top match's `recommendation` to an action using the canonical table in [`../references/classification.md` § Interpreting the recommendation](../references/classification.md#interpreting-the-recommendation). An empty `matches` array means no templates are stored (or all candidates have `requirementsSatisfied: false`) — author from scratch.
 
 3. **For a strong match** — verify correctness:
-   - Run `dotnet script scripts/dry-run.csx -- --pdf <pdf> --template <matched-id-or-path>`
+   - `dry-run.csx --template` takes a **file path**, not a store ID, so first materialise the matched template: `dotnet script scripts/load-template.csx -- --id <matched-id> --store-path <abs-store-dir> --output <file>`
+   - Then run `dotnet script scripts/dry-run.csx -- --pdf <pdf> --template <file>`
    - If extraction produces expected data → done.
    - If extraction produces empty collections or nonsensical data → **misclassification**. See [`../references/troubleshooting.md` § Branch C](../references/troubleshooting.md#branch-c--classification-failure).
 

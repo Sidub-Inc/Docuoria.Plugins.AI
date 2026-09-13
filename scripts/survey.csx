@@ -91,7 +91,7 @@ try
     {
         // Exit 2 after emitting the full envelope: unmatched PDFs need a human/agent
         // grouping decision before templates are authored.
-        Environment.Exit(2);
+        ScriptHost.Exit(2);
     }
 }
 catch (Exception ex)

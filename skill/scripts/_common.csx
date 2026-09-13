@@ -1,11 +1,11 @@
-#r "nuget: Microsoft.Extensions.Hosting, 10.0.8"
-#r "nuget: Microsoft.Extensions.DependencyInjection, 10.0.8"
-#r "nuget: Microsoft.Extensions.Http, 10.0.8"
+#r "nuget: Microsoft.Extensions.Hosting, 10.0.12"
+#r "nuget: Microsoft.Extensions.DependencyInjection, 10.0.12"
+#r "nuget: Microsoft.Extensions.Http, 10.0.12"
 #r "nuget: PdfPig, 0.1.14"
 #r "nuget: Tabula, 1.0.1"
 #r "nuget: CsvHelper, 33.1.0"
 #r "nuget: pythonnet, 3.0.5"
-#r "nuget: Sidub.Licensing.Client, 1.5.1"
+#r "nuget: Sidub.Licensing.Client, 2.0.10"
 #r "../assets/lib/Docuoria.dll"
 
 #nullable enable
@@ -25,6 +25,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Docuoria.Contracts;
 using Docuoria.Licensing;
 using Docuoria.Output.Ledger;
@@ -71,6 +72,30 @@ public static class ScriptHost
     public static IHost CreateHost(string[] args, bool includeStore = true)
     {
         var builder = Host.CreateDefaultBuilder(args);
+
+        // Both script streams are contracts: stdout is a SINGLE line of result JSON, stderr a
+        // SINGLE line of error JSON, and callers parse both. The generic host's default console
+        // logger writes to stdout, and the licensing client logs at Information as it initialises,
+        // so a licensed run would interleave log lines with the result and break every consumer.
+        // Routing those logs to stderr only moves the breakage onto the error contract, so by
+        // default the scripts carry no log providers at all -- diagnostics travel in the error
+        // envelope's `detail` field instead.
+        //
+        // DOCUORIA_LOG_LEVEL is the debugging escape hatch: set it (Trace/Debug/Information/...)
+        // to get logs on stderr, accepting that the stderr JSON contract no longer holds.
+        builder.ConfigureLogging(logging =>
+        {
+            logging.ClearProviders();
+
+            var configured = Environment.GetEnvironmentVariable("DOCUORIA_LOG_LEVEL");
+            if (!string.IsNullOrWhiteSpace(configured)
+                && Enum.TryParse<LogLevel>(configured, ignoreCase: true, out var level))
+            {
+                logging.SetMinimumLevel(level);
+                logging.AddConsole(options => options.LogToStandardErrorThreshold = LogLevel.Trace);
+            }
+        });
+
         builder.ConfigureServices(services =>
         {
             services.AddDocuoriaEngine(b =>
@@ -83,12 +108,14 @@ public static class ScriptHost
             });
             // Licensing (distributed channel): enforce by default so the skill product gates
             // features and surfaces the acquisition journey. DOCUORIA_ENFORCEMENT can override
-            // (e.g. Disabled for local development) and DOCUORIA_CHECKOUT_API_KEY enables
-            // self-serve checkout — both without recompiling. Enforcement logic lives in the SDK guard.
+            // (e.g. Disabled for local development) and DOCUORIA_ENVIRONMENT selects a non-production
+            // deployment — both without recompiling. Enforcement logic lives in the SDK guard.
             //
-            // The license lives BESIDE the skill (`<scripts-dir>/docuoria.license.json`), not in a
-            // machine-wide user-home file, so the skill is self-contained and the CLI tool is not a
-            // dependency. `license-set.csx` / `license-acquire.csx` write this file; the SDK reads it.
+            // The license lives BESIDE the skill (`<scripts-dir>/docuoria.license.json`) so the skill
+            // is self-contained and the CLI tool is not a dependency: `license-set.csx` writes this
+            // file and the SDK reads it first. The SDK then falls back to the user-home file
+            // (`~/.docuoria/license.json`), which is where `docuoria license acquire` stores a
+            // licence, so either acquisition path lights up the skill.
             var skillLicensePath = ResolveSkillLicensePath();
             services.AddDocuoriaLicensingForDistribution(o =>
             {
@@ -96,7 +123,32 @@ public static class ScriptHost
                     o.LicensePath = skillLicensePath;
             });
         });
-        return builder.Build();
+        var host = builder.Build();
+        _current = host;
+        return host;
+    }
+
+    private static IHost? _current;
+
+    /// <summary>
+    /// Disposes the live host and terminates the process with <paramref name="exitCode"/>. Every
+    /// non-returning exit in the scripts goes through here. <see cref="Environment.Exit(int)"/> on
+    /// its own never unwinds the <c>using var host</c> in the calling script, and the licensing
+    /// client delivers buffered consumption only when the host is disposed, so a bare exit silently
+    /// dropped the metered usage of every failed or partial run.
+    /// </summary>
+    [DoesNotReturn]
+    public static void Exit(int exitCode)
+    {
+        var host = _current;
+        _current = null;
+        if (host is not null)
+        {
+            try { host.Dispose(); }
+            catch { /* cleanup must never mask the real exit code */ }
+        }
+        Environment.Exit(exitCode);
+        throw new InvalidOperationException("Environment.Exit returned unexpectedly.");
     }
 
     /// <summary>
@@ -110,20 +162,22 @@ public static class ScriptHost
             : Directory.GetCurrentDirectory();
 
     /// <summary>
-    /// Skill-local license file path (<c>&lt;scripts-dir&gt;/docuoria.license.json</c>). The SDK store
-    /// reads and writes here so the license travels with the skill install rather than a machine-wide
-    /// user-home file. Returns <see langword="null"/> when an explicit <c>DOCUORIA_HOME</c> is set
-    /// (the store resolves that itself); honors <c>DOCUORIA_LICENSE_PATH</c> for an explicit override.
-    /// The <c>DOCUORIA_LICENSE</c> environment variable still takes precedence over any file.
+    /// Skill-local license file path (<c>&lt;scripts-dir&gt;/docuoria.license.json</c>): the file the
+    /// SDK store writes and reads first, so the license travels with the skill install. Precedence:
+    /// an explicit <c>DOCUORIA_LICENSE_PATH</c> always wins (a named file is the most specific
+    /// instruction); otherwise a <c>DOCUORIA_HOME</c> directory convention returns
+    /// <see langword="null"/> so the store uses <c>%DOCUORIA_HOME%/license.json</c> alone; otherwise
+    /// the default beside the scripts. Whatever the primary file, the store also falls back to the
+    /// user-home file on read. The <c>DOCUORIA_LICENSE</c> environment variable beats every file.
     /// </summary>
     public static string? ResolveSkillLicensePath()
     {
-        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCUORIA_HOME")))
-            return null;
-
         var explicitPath = Environment.GetEnvironmentVariable("DOCUORIA_LICENSE_PATH");
         if (!string.IsNullOrWhiteSpace(explicitPath))
             return explicitPath;
+
+        if (!string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("DOCUORIA_HOME")))
+            return null;
 
         return Path.Combine(ScriptDirectory(), DocuoriaLicenseOptions.LicenseFileName);
     }
@@ -217,6 +271,42 @@ public static class Cli
             Console.WriteLine();
             Environment.Exit(0);
         }
+
+        Validate(args, argDefs);
+    }
+
+    /// <summary>
+    /// Rejects any <c>--flag</c> the script did not declare, and any stray positional token, with
+    /// <c>unknown-arg</c> (exit 2) and the list of valid flags. Agents learn flags only from the
+    /// documentation; a mistyped or invented flag used to be ignored silently and surfaced later as
+    /// a confusing <c>missing-arg</c> or as a run that quietly did something else.
+    /// </summary>
+    public static void Validate(IList<string> args, IReadOnlyList<(string Name, bool Required, string Description, bool IsFlag)> argDefs)
+    {
+        if (args is null || args.Count == 0) return;
+
+        var valid = string.Join(", ", argDefs.Select(d => "--" + d.Name).Append("--help"));
+        for (int i = 0; i < args.Count; i++)
+        {
+            var token = args[i];
+            if (token.StartsWith("--", StringComparison.Ordinal) && token.Length > 2)
+            {
+                var name = token.Substring(2);
+                if (name == "help" || name == "h") continue;
+
+                var def = argDefs.FirstOrDefault(d => string.Equals(d.Name, name, StringComparison.Ordinal));
+                if (def.Name is null)
+                {
+                    JsonOut.Error("unknown-arg",
+                        $"Unknown argument '{token}'. Valid flags: {valid}.", null, 2);
+                }
+                if (!def.IsFlag) i++; // the next token is this flag's value
+                continue;
+            }
+
+            JsonOut.Error("unknown-arg",
+                $"Unexpected positional argument '{token}'. Every value must follow its flag. Valid flags: {valid}.", null, 2);
+        }
     }
 
     /// <summary>Returns the value following <c>--key</c>, or null when absent.</summary>
@@ -294,38 +384,120 @@ public static class JsonOut
         var payload = new { error = new { code, message, detail } };
         var json = JsonSerializer.Serialize(payload, DocuoriaJsonOptions.Default);
         Console.Error.WriteLine(json);
-        Environment.Exit(exitCode);
-        throw new InvalidOperationException("Environment.Exit returned unexpectedly.");
+        ScriptHost.Exit(exitCode);
     }
 
+    /// <summary>True for any Docuoria licence failure (required, inactive, invalid, unavailable, offering, feature, rate limit).</summary>
+    public static bool IsLicenseFailure(Exception ex) => ex is DocuoriaLicenseException;
+
     /// <summary>
-    /// Terminal failure mapper used by every script's outer catch. Docuoria license failures
-    /// carry deterministic message prefixes (DOCUORIA_LICENSE_REQUIRED:, DOCUORIA_FEATURE_DENIED:&lt;key&gt;,
-    /// DOCUORIA_RATE_LIMIT:&lt;key&gt;) so an agent reading stderr knows exactly what to tell the user.
-    /// Exit codes: 3 = license required (acquire or set a key), 1 = everything else.
+    /// Terminal failure mapper used by every script's outer catch. Docuoria license failures carry
+    /// deterministic message prefixes (DOCUORIA_LICENSE_REQUIRED:, DOCUORIA_LICENSE_INACTIVE:&lt;reason&gt;,
+    /// DOCUORIA_LICENSE_INVALID:, DOCUORIA_LICENSE_UNAVAILABLE:, DOCUORIA_OFFERING_UNAVAILABLE:,
+    /// DOCUORIA_FEATURE_DENIED:&lt;key&gt;, DOCUORIA_RATE_LIMIT:&lt;key&gt;) so an agent reading stderr knows
+    /// exactly what to tell the user.
     /// </summary>
+    /// <remarks>
+    /// Exit codes carry one distinction: <b>3 means the license itself needs attention</b> — it is
+    /// missing, expired/suspended, or no longer valid, and the user has to go do something about it
+    /// before any further call can succeed. <b>1 means this call failed</b> but the license is fine:
+    /// the feature is not in the plan, the usage window is exhausted, or the service is unreachable.
+    /// An agent should route a 3 to the acquisition/renewal journey and treat a 1 as a per-call
+    /// outcome. Exit <b>2</b> is the third: <c>offering-unavailable</c>, where the offering or
+    /// seller named does not exist — a configuration mistake rather than anything to do with a
+    /// licence. Every case is enumerated because the provider's exceptions have no common base;
+    /// anything unmapped reaches the user as "unhandled".
+    /// </remarks>
     [DoesNotReturn]
-    public static void Fail(Exception ex)
+    public static void Fail(Exception ex, string? context = null)
     {
+        // `context` lets a caller that stopped part-way (batch-execute) say what was completed and
+        // what remains; it is appended to the standard remediation so the agent reads one detail.
+        string With(string detail) => string.IsNullOrWhiteSpace(context) ? detail : detail + " " + context;
+
         switch (ex)
         {
             case DocuoriaLicenseRequiredException lre:
-                Error("license-required", lre.Message,
-                    "Run 'dotnet script scripts/license-acquire.csx -- --email <you>' for a free license, " +
-                    "or store an existing key with 'dotnet script scripts/license-set.csx -- --key <key>'.", 3);
+                Error("license-required", lre.Message, With(
+                    "Get a free licence: run 'dotnet script scripts/license-acquire.csx' (it returns the marketplace " +
+                    "link; store the issued key with 'dotnet script scripts/license-set.csx -- --key <key>'), or on a " +
+                    "machine with the Docuoria CLI run 'docuoria license acquire' to sign in without pasting a key."), 3);
+                break;
+            case DocuoriaOfferingUnavailableException oue:
+                // A configuration mistake, not a licence problem and not an outage: exit 2, the
+                // same code every other "you asked for something that is not there" uses.
+                Error("offering-unavailable", oue.Message, With(
+                    "Check the offering and issuer ids match the deployment you are pointed at."), 2);
+                break;
+            case DocuoriaLicenseInactiveException lie:
+                Error("license-inactive", lie.Message, With(
+                    $"The license is present but not active ({lie.Reason}). Renew or resume it, then retry."), 3);
+                break;
+            case DocuoriaLicenseInvalidException live:
+                Error("license-invalid", live.Message, With(
+                    "The stored credential could not be validated. Remove it with " +
+                    "'dotnet script scripts/license-remove.csx' and acquire a new one." +
+                    (string.IsNullOrWhiteSpace(live.CorrelationId)
+                        ? string.Empty
+                        : $" Quote correlation id {live.CorrelationId} to support.")), 3);
+                break;
+            case DocuoriaLicenseUnavailableException lue:
+                // Not the user's license, and not their fault -- retrying is the remediation, so
+                // this stays exit 1 rather than routing them into the acquisition journey.
+                Error("license-unavailable", lue.Message, With(
+                    "The licensing service is unreachable and the offline grace period has elapsed. " +
+                    "Reconnect and retry." +
+                    (string.IsNullOrWhiteSpace(lue.CorrelationId)
+                        ? string.Empty
+                        : $" Quote correlation id {lue.CorrelationId} to support.")), 1);
                 break;
             case DocuoriaFeatureDeniedException fde:
-                Error("feature-denied", fde.Message,
-                    $"The active license does not include '{fde.FeatureKey}'.", 1);
+                Error("feature-denied", fde.Message, With(
+                    $"The active license does not include '{fde.FeatureKey}'."), 1);
                 break;
             case DocuoriaRateLimitException rle:
-                Error("rate-limit", rle.Message,
-                    $"The usage window for '{rle.FeatureKey}' is exhausted; it resets automatically.", 1);
+                Error("rate-limit", rle.Message, With(
+                    $"The usage window for '{rle.FeatureKey}' is exhausted; it resets automatically within a minute."), 1);
                 break;
             default:
-                Error("unhandled", ex.Message, ex.ToString(), 1);
+                Error("unhandled", ex.Message, With(ex.ToString()), 1);
                 break;
         }
+    }
+
+    /// <summary>
+    /// Terminal mapper for the acquisition scripts. Lives here rather than in the calling script
+    /// because only this file carries the SDK <c>#r</c>: in dotnet-script a reference from a
+    /// <c>#load</c>ed file lets the loader USE those types but not NAME them, so a script that
+    /// writes <c>catch (DocuoriaCheckoutUnavailableException)</c> fails to compile. Keeping the
+    /// type names on this side of the boundary is what makes the calling script buildable.
+    /// </summary>
+    [DoesNotReturn]
+    public static void FailAcquisition(Exception ex)
+    {
+        switch (ex)
+        {
+            case DocuoriaCheckoutUnavailableException cue:
+                // The scripts carry no buyer sign-in (device code needs a person at a browser, and
+                // this channel is agent-driven), so free acquisition from here is always the
+                // marketplace-paste path. Hand the agent the purchase URL as data so it can give
+                // the user a real link rather than restating a bare domain.
+                Error("checkout-unavailable", cue.Message,
+                    $"Sign-in is not available from the scripts. Ask the user to open {cue.PurchaseUrl}, get a free key for "
+                    + $"\"{DocuoriaLicenseOptions.MarketplaceProductName}\", and paste it back; then store it with "
+                    + "'dotnet script scripts/license-set.csx -- --key <key>' and retry the original command. On a machine "
+                    + "with the Docuoria CLI, 'docuoria license acquire' signs in directly and the skill picks the licence up.", 1);
+                break;
+            case InvalidOperationException ioe:
+                Error("not-provisioned", ioe.Message,
+                    "Obtain a key from the marketplace and store it with license-set.csx.", 1);
+                break;
+            default:
+                Fail(ex);
+                break;
+        }
+
+        throw new InvalidOperationException("Error returned unexpectedly.");
     }
 }
 
@@ -460,4 +632,5 @@ public static class LedgerIo
         LedgerMergeAction.Replaced => "replaced",
         _ => "skipped-duplicate",
     };
+
 }

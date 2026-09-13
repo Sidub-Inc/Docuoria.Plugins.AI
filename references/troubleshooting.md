@@ -8,7 +8,7 @@ The single place to diagnose anything that goes wrong. Find your situation in th
 ## Contents
 
 - [Symptom index](#symptom-index) — symptom → section lookup
-- [Symptom interpretation](#symptom-interpretation): [pattern non-match](#pattern-non-match-hasmatches-false) · [completeness terminology](#completeness-terminology) · [validator `$kind` error](#validator-discriminator-error-bad-format-on-kind)
+- [Symptom interpretation](#symptom-interpretation): [pattern non-match](#pattern-non-match-hasmatches-false) · [completeness terminology](#completeness-terminology) · [validator `$kind` error](#validator-discriminator-error-bad-format-on-kind) · [`dotnet` / `dotnet-script` not found](#environment-dotnet-or-dotnet-script-not-found)
 - [Error-code routing](#error-code-routing) — `error.code` → branch table
 - [Branch A — RejectedResult](#branch-a--rejectedresult) (reasons 0–3)
 - [Branch B — FailedResult](#branch-b--failedresult) (steps 0–4)
@@ -26,6 +26,8 @@ The single place to diagnose anything that goes wrong. Find your situation in th
 | `dry-run`/`execute` reports `completeness.missingRequiredFields` or `emptyDeclaredCollections` | [Completeness terminology](#completeness-terminology) · [Incomplete success](#incomplete-success-exit-code-2) |
 | `validate-template` returns `bad-format` mentioning `$kind` | [Discriminator error](#validator-discriminator-error-bad-format-on-kind) |
 | A script printed `{ "error": { "code": ... } }` on stderr | [Error-code routing](#error-code-routing) |
+| `'dotnet' is not recognized …` or `Could not execute because the specified command or file was not found` | [Environment: `dotnet` / `dotnet-script` not found](#environment-dotnet-or-dotnet-script-not-found) |
+| stderr message starts `DOCUORIA_LICENSE_REQUIRED:` / `DOCUORIA_RATE_LIMIT:` / any `DOCUORIA_*:` prefix | [`licensing.md`](licensing.md) |
 | `RejectedResult` (engine refused before running a step) | [Branch A — RejectedResult](#branch-a--rejectedresult) |
 | `FailedResult` (a step threw) | [Branch B — FailedResult](#branch-b--failedresult) |
 | Wrong template ranked first, or nothing matched | [Branch C — Classification failure](#branch-c--classification-failure) |
@@ -66,6 +68,20 @@ When deserialization fails on a missing or unrecognized `$kind`, the engine prod
 - **Read the enumerated set in the error `detail`** — it is the authoritative list of accepted discriminators for the failing JSON path (reflected directly from the SDK, so it cannot drift). Pick the correct value from that set; do not guess.
 - The `SKILL.md` Discriminator reference table and [`template-reference.md`](template-reference.md) mirror this set for quick lookup, but the engine's error `detail` is the source of truth for the exact position that failed. `schema-info.csx` prints the live set too.
 
+## Environment: `dotnet` or `dotnet-script` not found
+
+Two symptoms, one cause each:
+
+- `'dotnet' is not recognized as an internal or external command` (or `dotnet: command not found`) — the **.NET 10 SDK** is not installed or not on `PATH`. Install it from <https://dotnet.microsoft.com/download>, open a new shell, and confirm with `dotnet --version`.
+- `Could not execute because the specified command or file was not found.` after `dotnet script …` — .NET is present but the **`dotnet-script` global tool** is missing. Install it and re-run:
+
+  ```powershell
+  dotnet tool install -g dotnet-script
+  dotnet script --version
+  ```
+
+Both are install-time prerequisites of the skill, not template or PDF problems. The installer (`docuoria init`) runs on Node.js or .NET, but the installed skill always needs both of the above; `docuoria doctor` reports whether they are present.
+
 ---
 
 # Error-code routing
@@ -75,16 +91,20 @@ Every script emits errors as `{ "error": { "code": "<code>", "message": "...", "
 | `error.code` | Emitted by | Meaning | Go to |
 | --- | --- | --- | --- |
 | `pdf-not-found` | every script that takes `--pdf` | The path passed to `--pdf` does not resolve to a file | Fix the path (relative paths resolve from the cwd); re-run. Input error, no branch. |
-| `template-not-found` | `load-template.csx`, `evaluate-match.csx`, `dry-run.csx`, `execute.csx` | Template ID does not exist in the store, or the `--template` path does not resolve | Run `list-templates.csx` to confirm the ID, or correct the path. No branch. |
-| `no-store` | `classify.csx`, `list-templates.csx`, `load-template.csx`, `save-template.csx` | No `--store-path`/`--store-url` was given and the default `./templates` was not found | Pass `--store-path <dir>`; see [`scripts.md`](scripts.md) § Common store parameters. No branch. |
+| `template-not-found` | `dry-run.csx`, `execute.csx`, `evaluate-match.csx`, `regression-check.csx` | The `--template` (or `--modified` / `--baseline`) path does not resolve to a file | Correct the path (relative paths resolve from the cwd). No branch. |
+| `not-found` | `load-template.csx`, `regression-check.csx` (`--baseline-id`) | Template ID does not exist in the store | Run `list-templates.csx -- --store-path <abs-dir>` to confirm the ID and that you pointed at the right store. No branch. |
+| `missing-arg` | every script, for a required flag (exit 2) | A required `--flag` was not supplied | Add the flag; `--help` lists them. No branch. |
+| `unknown-arg` | every script (exit 2) | A `--flag` the script does not declare, or a stray positional token; the message lists the valid flags | Fix the invocation — the `--` separator must be present and every flag spelled as `--help` shows. No branch. |
+| `no-store` | `batch-execute.csx` only | Neither `--store-path` nor `--store-url` was given (this script has no `./templates` default) | Pass `--store-path <abs-dir>`. Other store scripts never emit this: a local store is always registered, and a missing directory simply yields `matches: []` / `templates: []`. No branch. |
 | `bad-format` | `validate-template.csx`, `dry-run.csx`, `execute.csx`, `save-template.csx` | Template JSON is malformed or fails schema validation | [Branch A](#branch-a--rejectedresult) — `MalformedTemplate`. Run `validate-template.csx` for the error list. |
-| `rejected` | `dry-run.csx`, `execute.csx` | Engine returned `RejectedResult` — see `reason` in stderr `detail` | [Branch A](#branch-a--rejectedresult) — match on the `RejectionReason`. |
-| `failed` | `dry-run.csx`, `execute.csx` | Engine returned `FailedResult` — see `step` in stderr `detail` | [Branch B](#branch-b--failedresult) — match on the `StepIdentifier`. |
+| `rejected` (stderr, exit 1) — or `kind: "DryRunRejected"` on **stdout, exit 0** | `execute.csx` and `dry-run.csx --preview-as` use the stderr code; plain `dry-run.csx` reports it on stdout, so route on `kind` | Engine returned `RejectedResult` — read `reason` | [Branch A](#branch-a--rejectedresult) — match on the `RejectionReason`. |
+| `failed` (stderr, exit 1) — or `kind: "DryRunFailed"` on **stdout, exit 0** | `execute.csx` and `dry-run.csx --preview-as` use the stderr code; plain `dry-run.csx` reports it on stdout, so route on `kind` | Engine returned `FailedResult` — read `step` | [Branch B](#branch-b--failedresult) — match on the `StepIdentifier`. |
 | `pattern-timeout` | `test-pattern.csx`, `test-groups.csx` | Regex matching exceeded the 5s match timeout (catastrophic backtracking) | [`patterns.md` § Backtracking complexity](patterns.md#backtracking-complexity) — make the pattern deterministic; `--timeout-ms` overrides the limit. |
 | (stdout) `DryRunSucceeded` with empty collections | `dry-run.csx`, `execute.csx` | Succeeded but a `RepeatingFieldMapping` returned `[]` or a scalar returned `null` | [Silent or empty results](#silent-or-empty-results) — no stderr; detect from stdout. |
 | Wrong template ranked first, or nothing ranked | `classify.csx` | Unexpected ordering — diagnose via the ranked matches | [Branch C](#branch-c--classification-failure). |
 | `already-exists` | `save-template.csx` | Template with the same ID already exists | Pass `--overwrite` if intentional, or pick a different ID. No branch. |
 | `unhandled` | any script | Unexpected exception inside the script (`detail` has the stack) | SDK/script defect, not a template/PDF problem. File a bug. No branch. |
+| `license-required` / `license-inactive` / `license-invalid` (exit 3) · `rate-limit` / `feature-denied` / `license-unavailable` (exit 1) · `offering-unavailable` (exit 2) · `checkout-unavailable` (exit 1, `license-acquire.csx` only) | any script | Licence enforcement; the message starts with a `DOCUORIA_*:` prefix | [`licensing.md`](licensing.md). In `batch-execute.csx` a licence failure stops the batch at that PDF: completed outputs are written, `detail` lists processed and remaining PDFs, and re-running with `--append` after the window resets completes it. |
 
 ## Branch A — RejectedResult
 
@@ -246,7 +266,7 @@ The *silent failure* mode — the pipeline reports success but a field (typicall
 - Zero matches → the collection anchor or pattern is wrong; use `inspect.csx` to locate the table or list in the haystack → [Silent or empty results](#silent-or-empty-results).
 - Matches on the wrong page → add `pageNumber` to the extraction source.
 
-Exit code 2 always means a template correction, never a pipeline fix. (Exit code 1 means the pipeline itself failed — see [Branch B](#branch-b--failedresult).)
+Exit code 2 with JSON on stdout always means a template correction, never a pipeline fix. (On `execute.csx`, exit 1 with `failed`/`rejected` on stderr means the pipeline itself failed; plain `dry-run.csx` reports the same verdict as `kind: "DryRunFailed"`/`"DryRunRejected"` on stdout with exit 0 — see [Branch B](#branch-b--failedresult). Exit 2 with JSON on **stderr** is an argument error such as `missing-arg` or `unknown-arg`.)
 
 ## Required field null at publish
 

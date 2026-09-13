@@ -9,6 +9,12 @@ output contract:
 - **Successful runs** emit a single line of UTF-8 JSON to **stdout**, exit code `0`.
 - **Errors** emit a single `{"error":{"code","message","detail"}}` line to **stderr**,
   non-zero exit code.
+- **Exit code `2` is shared** by argument errors (`missing-arg`, `unknown-arg`, `bad-format`, ...
+  -- stderr JSON) and by "ran, but incomplete" outcomes (`dry-run`, `execute`, `batch-execute`
+  -- stdout JSON). Disambiguate by **which stream carries the JSON**, never by the exit code alone.
+- **Unknown flags are rejected.** Any `--flag` a script does not declare, or any stray positional
+  token, fails with stderr `{"error":{"code":"unknown-arg","message":"...","detail":null}}` --
+  the message lists the valid flags -- and exit `2`.
 - All payloads serialize via `DocuoriaJsonOptions.Default` (camelCase, `$kind`
   discriminator for polymorphic results, `WhenWritingNull` ignore policy — see Classify
   for the explicit-null exception). Enums serialize as **integers** unless a type has a
@@ -24,11 +30,12 @@ loading, and JSON writers.
 > returns the ranked list; both throw `InvalidOperationException` when no store is registered.
 > `EvaluateMatchAsync` rule confidence is binary in v1.4 (`1.0` / `0.0`).
 
-> **Distribution:** this directory is the **source** for the AI plugin's `scripts/`
-> folder. `skills/build.ps1` copies these `.csx` files into `dist/docuoria/scripts/`
-> and rewrites the SDK `#r` line in `_common.csx` to point at the bundled
-> `assets/lib/Docuoria.dll`. In-repo development uses the relative
-> `bin/Release/...dll` path; downstream consumers receive the bundled DLL.
+> **Distribution (maintainers):** in the Docuoria repository this directory is the **source**
+> for the AI plugin's `scripts/` folder. `skills/build.ps1` copies these `.csx` files into
+> `dist/docuoria/scripts/` and rewrites the SDK `#r` line in `_common.csx` from the in-repo
+> `bin/Debug/...dll` path to the bundled `assets/lib/Docuoria.dll`. If you are reading this
+> inside an installed skill, that rewrite has already happened and there is no `src/` tree
+> here — see [Installation](#installation).
 
 ## Contents
 
@@ -45,11 +52,24 @@ loading, and JSON writers.
 
 ## Installation
 
+**If you installed Docuoria as a skill or plugin**, the SDK assembly is already bundled beside
+these scripts at `../assets/lib/Docuoria.dll`. You need only the script runtime:
+
 ```powershell
 dotnet tool install -g dotnet-script
-# build the SDK once so _common.csx can reference the local DLL
+```
+
+**If you are working in the Docuoria repository**, `_common.csx` references the SDK from its
+build output instead, so build it once — in `Debug`, which is the configuration that path
+names:
+
+```powershell
+dotnet tool install -g dotnet-script
 dotnet build src/libs/Docuoria/Docuoria.csproj -c Debug
 ```
+
+Skipping that step fails with `error CS0006: Metadata file '…Docuoria.dll' could not be
+found`, naming the path it wanted.
 
 Run any script with:
 
@@ -89,24 +109,62 @@ location.
 }
 ```
 
-Common `code` values: `pdf-not-found`, `parse-error`, `already-exists`, `no-store`,
-`unhandled`, `bad-format`, `pattern-timeout` (regex match exceeded the timeout on
-`test-pattern`/`test-groups` — see those scripts), and the licensing codes
-`license-required` (exit 3), `feature-denied`, `rate-limit` — see
+Common `code` values: `pdf-not-found`, `parse-error`, `already-exists`, `unhandled`,
+`bad-format`, `pattern-timeout` (regex match exceeded the timeout on
+`test-pattern`/`test-groups` — see those scripts), the argument errors `missing-arg` and
+`unknown-arg` (exit 2, every script), `no-store` (`batch-execute` only — every other store
+script always has a local store registered), and the licensing codes `license-required`,
+`license-inactive`, `license-invalid` (exit 3), `license-unavailable`, `feature-denied`,
+`rate-limit`, `checkout-unavailable` (exit 1; the last from `license-acquire` only),
+`offering-unavailable` (exit 2) — see
 [Licensing & exit code 3](#licensing--exit-code-3).
 
 ## Licensing & exit code 3
 
-Docuoria enforces a (free) Monaiq license inside the SDK. Pre-licensed machines (no
-credential anywhere) behave exactly as before — enforcement activates as soon as a
-credential source exists (`DOCUORIA_LICENSE` environment variable or
-`~/.docuoria/license.json`, directory overridable via `DOCUORIA_HOME`).
+Docuoria enforces a (free) Monaiq license inside the SDK. **The script runtime enforces by
+default**, so a command run with no valid license fails fast rather than running unlicensed.
+The scripts resolve a licence in this order: the `DOCUORIA_LICENSE` environment variable; the
+skill-local file `<scripts-dir>/docuoria.license.json` (or the path in
+`DOCUORIA_LICENSE_PATH`); the user-home file `~/.docuoria/license.json` (setting `DOCUORIA_HOME` replaces both file locations with `%DOCUORIA_HOME%/license.json`, unless `DOCUORIA_LICENSE_PATH` names a file, which then stays first with the home file as fallback).
+`license-set.csx` writes the skill-local file; `docuoria license acquire` (.NET CLI) writes
+`~/.docuoria/license.json`, which the scripts therefore pick up. `license-remove.csx` removes
+the skill-local file only (`docuoria license remove` for the user-home one). Set
+`DOCUORIA_ENFORCEMENT=Disabled` for local development.
 
-When an enforced operation runs without a valid license, the script exits with **code 3**
-and emits the error code `license-required`; the message carries the deterministic prefix
-`DOCUORIA_LICENSE_REQUIRED:`. Two other deterministic license failures exit 1:
-`feature-denied` (`DOCUORIA_FEATURE_DENIED:<featureKey>`) and `rate-limit`
-(`DOCUORIA_RATE_LIMIT:<featureKey>`).
+An embedding library that calls `AddDocuoriaLicensing` directly gets `Auto` instead —
+transparent until a credential source exists — but that is not how the scripts run.
+
+**Exit 3 means the license itself needs attention** and nothing will succeed until it does:
+`license-required` (`DOCUORIA_LICENSE_REQUIRED:` — no license), `license-inactive`
+(`DOCUORIA_LICENSE_INACTIVE:<reason>` — expired, suspended, or cancelled), and
+`license-invalid` (`DOCUORIA_LICENSE_INVALID:` — the stored credential does not validate).
+
+**Exit 1 means this call failed while the license is fine**: `feature-denied`
+(`DOCUORIA_FEATURE_DENIED:<featureKey>`), `rate-limit`
+(`DOCUORIA_RATE_LIMIT:<featureKey>`), and `license-unavailable`
+(`DOCUORIA_LICENSE_UNAVAILABLE:` — the licensing service is unreachable *and* the offline
+grace period has elapsed; reconnect and retry).
+
+**A licence failure mid-batch** (`batch-execute.csx`) is not swallowed per PDF. Processing stops
+at the PDF that hit it; outputs for PDFs already completed **are** written; then the standard
+licence envelope goes to stderr with its usual code and exit (3 for `license-required` /
+`license-inactive` / `license-invalid`, 1 for `rate-limit` / `feature-denied` /
+`license-unavailable`, 2 for `offering-unavailable`). `detail` states how many PDFs were
+processed, which outputs were written, which PDFs remain, and that re-running with `--append`
+after the window resets completes the batch. stdout stays empty.
+
+Offline use depends on the host. Long-running SDK hosts and the CLI hold the last verified
+authorization in memory and keep working for a bounded grace period (tunable via
+`DOCUORIA_AUTH_GRACE_MINUTES`) when the service cannot be reached. The scripts start a fresh
+process per command, so that cache is empty every time: a script run with no network fails with
+`license-unavailable` (exit 1). Reconnect and retry; it is not a licence problem. `DOCUORIA_ENVIRONMENT` points every licensing endpoint at a
+non-production deployment.
+
+**Logging is off by default.** Both streams are contracts — stdout carries a single line of
+result JSON, stderr a single line of error JSON — so the scripts register no log providers;
+diagnostics travel in the error envelope's `detail` field. Set `DOCUORIA_LOG_LEVEL`
+(`Trace`/`Debug`/`Information`/...) to get framework logs on stderr while debugging, accepting
+that the stderr JSON contract no longer holds while it is set.
 
 Remediation surface (mirrors `docuoria license <verb>` in the CLI):
 
@@ -114,8 +172,8 @@ Remediation surface (mirrors `docuoria license <verb>` in the CLI):
 | ------ | ------- |
 | `license-status.csx` | Report license state, features, and usage. Exit 0 even when unlicensed. |
 | `license-set.csx -- --key <key>` | Validate + store an encoded credential (never echoed back). |
-| `license-acquire.csx -- --email <you>` | Self-serve free license; stores the credential on success. |
-| `license-remove.csx` | Delete the locally stored key (env var is unaffected). |
+| `license-acquire.csx` | Takes no arguments. Buyer sign-in is not available from the scripts, so this exits 1 with `checkout-unavailable` and the purchase URL in `detail`; use `docuoria license acquire` (.NET CLI) or the paste path via `license-set.csx`. |
+| `license-remove.csx` | Delete the skill-local key only (env var and `~/.docuoria/license.json` are unaffected; `docuoria license remove` handles the latter). |
 
 ---
 
@@ -200,7 +258,7 @@ independently degrades to a non-matching row instead of erroring.)
 **Example.**
 
 ```powershell
-dotnet script scripts/test-groups.csx -- --pattern @rows.txt --pdf invoice.pdf
+dotnet script scripts/test-groups.csx -- --pattern '(?<code>\w{10})\s+\$(?<amt>\d+\.\d{2})' --pdf invoice.pdf
 ```
 
 ---
@@ -238,7 +296,7 @@ preview formatted output with `--preview-as`.
 | `--template`   | yes      | Path to the template JSON file.                            |
 | `--preview-as` | no       | Preview formatted output: `csv` or `json` (no file written). |
 
-**Output schema.** `{ kind: "DryRunSucceeded"|"DryRunFailed"|"DryRunRejected", result, completeness }`. `DryRunSucceeded.result` carries `jsonProjection`, `diagnostics`, `rawHaystack`; `DryRunFailed.result` carries `step` (int), `fieldPath`, `sourceText`, `targetTypeName`, `innerDetail`; `DryRunRejected.result` carries `reason` (int), `detail`. With `--preview-as`: `{ kind, format, preview }`.
+**Output schema.** `{ kind: "DryRunSucceeded"|"DryRunFailed"|"DryRunRejected", result, completeness? }` on **stdout** for all three kinds — route on `kind`. `completeness` is present **only** for `DryRunSucceeded`. `DryRunSucceeded.result` carries `jsonProjection`, `diagnostics`, `rawHaystack`; `DryRunFailed.result` carries `step` (int), `fieldPath`, `sourceText`, `targetTypeName`, `innerDetail`; `DryRunRejected.result` carries `reason` (int), `detail`. With `--preview-as`: success is `{ kind: "SucceededResult", format, preview }`, and only in this mode a rejected/failed run becomes a **stderr** `rejected` / `failed` error with exit 1.
 
 **Publish-validation parity.** A record that would fail the publish step's schema
 validation on execute (e.g. a required field with a null value in any row) returns
@@ -246,7 +304,7 @@ validation on execute (e.g. a required field with a null value in any row) retur
 would produce — a dry-run verdict is the execute verdict. Output generation is still
 bypassed.
 
-**Exit codes.** `0` complete · `2` succeeded but `completeness.isComplete` is `false` · `1` failed/rejected/unhandled.
+**Exit codes.** `0` `DryRunSucceeded` and complete, **or** `DryRunFailed` / `DryRunRejected` (stdout — a dry-run verdict, not a process error) · `2` succeeded but `completeness.isComplete` is `false` (stdout JSON), or an argument error (`missing-arg`, `unknown-arg`, `bad-format` for `--preview-as` — stderr JSON) · `1` `template-not-found`, `pdf-not-found`, `rejected` / `failed` under `--preview-as`, unhandled.
 
 **Example.**
 
@@ -283,9 +341,9 @@ ledgers keep the original overwrite semantics.
 | `--strict-header` | no       | With `--append --format csv`: fail instead of adding new columns to the ledger header.     |
 | `--overwrite`     | no       | Allow a plain (non-append) `--output` to replace an existing Docuoria ledger.              |
 
-**Output schema.** Success (no `--output`): `{ status: "ok", format, output, completeness }`. Success (plain `--output`): `{ status: "ok", path, completeness }`. Success (`--append`): `{ status: "ok", path, completeness?, ledger: { action: "appended"|"replaced"|"skipped-duplicate", sourceFile, rowsAdded, rowsRemoved, columnsAdded?, totalRows, totalSources } }` — `completeness` is absent on a skipped duplicate because the engine never ran; `columnsAdded` is present only when the merge evolved the CSV header. Failure: `{ status: "rejected"|"failed", result }`.
+**Output schema.** Success (no `--output`): `{ status: "ok", format, output, completeness }`. Success (plain `--output`): `{ status: "ok", path, completeness }`. Success (`--append`): `{ status: "ok", path, completeness?, ledger: { action: "appended"|"replaced"|"skipped-duplicate", sourceFile, rowsAdded, rowsRemoved, columnsAdded?, totalRows, totalSources } }` — `completeness` is absent on a skipped duplicate because the engine never ran; `columnsAdded` is present only when the merge evolved the CSV header. Failure: **stderr** `{ "error": { "code": "rejected"|"failed", "message", "detail" } }`, exit 1, stdout empty — there is no stdout `status: "rejected"`.
 
-**Exit codes.** `0` complete (an idempotent duplicate skip is success) · `2` succeeded but `completeness.isComplete` is `false` · `1` rejected / failed / refused (`not-a-ledger`, `existing-ledger`, `duplicate-source` under `--on-duplicate fail`).
+**Exit codes.** `0` complete (an idempotent duplicate skip is success) · `2` succeeded but `completeness.isComplete` is `false` (stdout JSON), **or** an argument error (`bad-format`, `append-requires-output`, `on-duplicate-requires-append`, `strict-header-requires-csv-append`, `overwrite-requires-plain`, `bad-on-duplicate`, `missing-arg`, `unknown-arg` — stderr JSON; disambiguate by stream) · `1` `rejected` / `failed` / `template-not-found` / `pdf-not-found` / refused (`not-a-ledger`, `existing-ledger`, `duplicate-source` under `--on-duplicate fail`).
 
 **Examples.**
 
@@ -304,7 +362,13 @@ consolidated **ledger** output. For each PDF (ordinal-sorted by file name) the t
 classification decides the route: `"strong"` executes the matched template;
 `"partial"` and `"no-match"` are recorded as **skipped** — the batch never guesses, the caller
 resolves partials per the partial-match decision and re-runs. A failed/rejected execution is
-recorded per-PDF and the batch continues.
+recorded per-PDF (`status: "failed"`) and the batch continues. A **licence failure** is the
+exception (rate limit, feature denied, licence required/inactive/invalid/unavailable):
+processing stops at that PDF, outputs for PDFs already completed **are** written, and the
+standard licence envelope goes to stderr with its usual code and exit (3 / 1 / 2 per
+[Licensing & exit code 3](#licensing--exit-code-3)); `detail` states how many PDFs were
+processed, which outputs were written, which PDFs remain, and that re-running with `--append`
+after the window resets completes the batch. stdout stays empty.
 
 **The ledger shape.** CSV (default) leads with `sourceFile` (file name only) and
 `templateId` provenance columns, followed by the union of all per-template headers in
@@ -353,7 +417,7 @@ routes every PDF, so the store is required.
 
 **Output schema.** `{ pdfs: [{ pdf, templateId, recommendation, status: "ok"|"incomplete"|"skipped"|"duplicate"|"failed", rows, action?, reason?, error?, completeness? }], summary: { pdfCount, succeeded, incomplete, skipped, duplicates, failed, rowsWritten, totalRows, outputPath?, outputs: [{ path, rowsWritten, totalRows, totalSources, columnsAdded? }] } }`. `reason` is `"no-template-match"` / `"partial-match"` on skipped entries and `"already-in-output"` on duplicate entries; `action` (`"appended"`/`"replaced"`) appears on executed entries in append mode; `rows` counts CSV rows (or 1 JSON envelope) the PDF contributed; `rowsWritten` is what this run added, `totalRows` what the ledger now holds; `outputPath` is omitted when `--output` is tokenized (read `outputs` instead); `completeness` is present when a succeeded execution was incomplete (`"incomplete"` rows are still merged).
 
-**Exit codes.** `0` every PDF `"ok"` or `"duplicate"` (duplicate skips are the append steady state, not a problem) · `2` ran, but at least one PDF skipped/incomplete/failed (ledgers still written for the ok rows) · `1` bad args / missing corpus / no store / zero PDFs / refused output target (`not-a-ledger`, `would-drop-sources`, `existing-output`, `duplicate-source` under `fail`).
+**Exit codes.** `0` every PDF `"ok"` or `"duplicate"` (duplicate skips are the append steady state, not a problem) · `2` ran, but at least one PDF skipped/incomplete/failed (stdout JSON; ledgers still written for the ok rows) — **or** an argument error (`bad-format`, `on-duplicate-requires-append`, `strict-header-requires-csv-append`, `overwrite-requires-plain`, `bad-on-duplicate`, `missing-arg`, `unknown-arg` — stderr JSON; disambiguate by stream) · `1` `no-store` / `corpus-not-found` / `empty-corpus` / refused output target (`not-a-ledger`, `would-drop-sources`, `existing-output`, `duplicate-source` under `fail`) / a licence failure mid-batch with `rate-limit`, `feature-denied`, or `license-unavailable` · `3` a licence failure mid-batch with `license-required`, `license-inactive`, or `license-invalid` (`offering-unavailable` is exit 2 on stderr).
 
 **Examples.**
 
@@ -410,7 +474,7 @@ the top matches sorted by confidence (descending).
 
 **Output schema.** `{ matches: [{ templateId, classificationScore, recommendation, requirementsSatisfied, specificityScore, matchQuantityScore, coverageScore, ruleConfidence, ambiguity }, ...] }`, sorted by `classificationScore` descending. `recommendation` per match: `"strong"` (rule matched, all requirements satisfied, every declared mapping produced ≥ 1 match), `"partial"` (rule matched but ≥ 1 mapping found nothing), `"no-match"` (rule failed or a requirement unsatisfied). Route on `recommendation`; use `classificationScore` only to order candidates and spot near-ties. Templates with `requirementsSatisfied: false` are excluded. `ambiguity` is non-null only for partial or near-tie matches.
 
-**Exit codes.** `0` success (including an empty `matches` array) · `1` `no-store` if no template store is registered · `1` unhandled.
+**Exit codes.** `0` success (including an empty `matches` array — a missing store directory is not an error) · `2` `missing-arg` / `unknown-arg` · `1` `pdf-not-found` / unhandled. There is no `no-store` path: a local store is always registered.
 
 **Example.**
 
@@ -457,7 +521,7 @@ dotnet script scripts/list-templates.csx -- --store-path ./templates
 **Output schema.** Without `--output`: full template JSON. With `--output`:
 `{ status: "ok", path }`.
 
-**Exit codes.** `0` success · `1` not-found / unhandled.
+**Exit codes.** `0` success · `2` `missing-arg` / `unknown-arg` · `1` `not-found` (ID not in the store) / unhandled.
 
 **Example.**
 
@@ -543,7 +607,7 @@ prove the change does not break the PDFs it already handled. Provide the baselin
 
 **Output schema.** `{ pdfs: [{ pdfPath, baselineClassificationScore, modifiedClassificationScore, baselineRequirementsSatisfied, modifiedRequirementsSatisfied, scalarDiffs: [{ fieldName, baseline, modified }], collectionDiffs: [{ collectionName, baselineRowCount, modifiedRowCount }], isRegression, isImprovement }], summary: { regressionsDetected, improvementsDetected, unchanged } }`.
 
-**Exit codes.** `0` no regressions · `2` regressions detected · `1` invalid input.
+**Exit codes.** `0` no regressions · `2` regressions detected (stdout JSON), or an argument error on stderr: `missing-arg` (`--modified`, `--corpus`, or neither baseline flag), `ambiguous-baseline` (both `--baseline` and `--baseline-id`), `unknown-arg` · `1` `corpus-not-found`, `template-not-found` (`--modified` or `--baseline` path), `empty-corpus`, `not-found` (`--baseline-id` not in the store), unhandled.
 
 **Example.**
 
@@ -584,8 +648,10 @@ dotnet script scripts/license-status.csx
 ```
 
 **Output.** `{ licensed, credentialPresent, credentialSource, licenseId, expiry, features,
-consumption: [{ featureKey, currentUsage, limit, windowSeconds }], marketplaceUrl, guidance }`.
-`currentUsage` is `null` when the installed client cannot report it. Exit 0 always —
+consumption: [{ featureKey, currentUsage, limit, unlimited, windowSeconds, percentage }],
+marketplaceUrl, purchaseUrl, guidance }`. `unlimited` is `true` when `limit` is `0`;
+`purchaseUrl` is the page to send a user to for a key (`https://monaiq.com/marketplace` by
+default). `currentUsage` is `null` when the installed client cannot report it. Exit 0 always —
 "unlicensed" is a reportable state, not an error.
 
 ## license-set.csx
@@ -603,24 +669,30 @@ is `false` when the licensing service was unreachable (the key is still stored).
 
 ## license-acquire.csx
 
-**Synopsis.** Self-serve acquisition of the free Docuoria license for an email address.
-Free offerings complete inline and store the credential automatically.
+**Synopsis.** Attempt self-serve acquisition of the free Docuoria license. Takes no
+arguments. Buyer sign-in lives with the host, and the script runtime has none — so from the
+scripts this **cannot complete**: it exits 1 with `checkout-unavailable` (message prefix
+`DOCUORIA_CHECKOUT_UNAVAILABLE:`) and the purchase URL in `detail`.
 
 ```powershell
-dotnet script scripts/license-acquire.csx -- --email you@example.com
+dotnet script scripts/license-acquire.csx
 ```
 
-**Output.** `{ status: "ok", stored: true, licenseId }` on success, or
-`{ status: "checkout-required", checkoutUrl }` when the offering needs browser checkout
-(complete it there, then use `license-set.csx`).
-**Errors.** `not-provisioned` (exit 1) when the catalog identifiers are not configured —
-fall back to the marketplace URL from `license-status.csx`; `acquire-failed` (exit 1)
-on provider-reported failure.
+**Output.** stderr `{ "error": { "code": "checkout-unavailable", "message", "detail": "Open <purchaseUrl>, get a key for \"Docuoria\", then store it with license-set.csx." } }`, exit 1. Use the URL in `detail`
+(also `purchaseUrl` in `license-status.csx`): the user signs in there, copies the key, and the
+agent stores it with `license-set.csx -- --key <key>`.
+
+The .NET CLI's `docuoria license acquire` **does** complete this journey — device-code sign-in
+in the browser, credential stored in `~/.docuoria/license.json`, which the scripts read — so on
+a machine with the CLI installed that is the better path (no key passes through the chat). A
+`checkout-required` status applies only to paid offerings and is not part of the free path.
+**Other errors.** `acquire-failed` (exit 1) on a provider-reported failure.
 
 ## license-remove.csx
 
-**Synopsis.** Delete the locally stored license key. The `DOCUORIA_LICENSE` environment
-variable is read-only and unaffected.
+**Synopsis.** Delete the skill-local license key (`<scripts-dir>/docuoria.license.json`).
+The `DOCUORIA_LICENSE` environment variable is read-only and unaffected, and so is
+`~/.docuoria/license.json` — remove that one with `docuoria license remove`.
 
 ```powershell
 dotnet script scripts/license-remove.csx

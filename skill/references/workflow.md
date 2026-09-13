@@ -1,4 +1,4 @@
-﻿# Workflow
+# Workflow
 
 The procedure you MUST follow to turn a PDF into structured output. The pipeline runs through a **template store** — a directory (or API endpoint) of JSON template files that define how to classify and extract a document type.
 

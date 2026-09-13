@@ -39,12 +39,12 @@ try
     {
         JsonOut.Error("ambiguous-baseline",
             "--baseline and --baseline-id are mutually exclusive. Specify exactly one.",
-            null, 1);
+            null, 2);
     }
 
     if (string.IsNullOrWhiteSpace(baselinePath) && string.IsNullOrWhiteSpace(baselineId))
     {
-        JsonOut.Error("missing-arg", "Either --baseline or --baseline-id is required.", null, 1);
+        JsonOut.Error("missing-arg", "Either --baseline or --baseline-id is required.", null, 2);
     }
 
     if (!Directory.Exists(corpusDir))
@@ -132,7 +132,7 @@ try
 
     if (diff.Summary.RegressionsDetected > 0)
     {
-        Environment.Exit(2);
+        ScriptHost.Exit(2);
     }
 }
 catch (Exception ex)

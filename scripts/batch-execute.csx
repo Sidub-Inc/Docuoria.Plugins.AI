@@ -240,6 +240,13 @@ try
     var entries = new List<BatchPdfEntry>();
     var mergeOptions = new LedgerMergeOptions { DuplicatePolicy = onDuplicate, StrictHeader = strictHeader };
 
+    // Set when a licence failure (rate limit, feature denied, licence required/inactive/invalid/
+    // unavailable) stops the batch part-way. The completed PDFs are still written below; the
+    // failure is then reported on stderr with the standard licence envelope, never folded into a
+    // per-PDF "failed" entry that the agent would read as a bad document.
+    Exception? licenseFailure = null;
+    var notProcessed = new List<string>();
+
     foreach (var pdfPath in pdfPaths)
     {
         var fileName = Path.GetFileName(pdfPath);
@@ -380,6 +387,16 @@ try
                     break;
             }
         }
+        catch (Exception perPdfEx) when (JsonOut.IsLicenseFailure(perPdfEx))
+        {
+            // A licence failure is not a bad PDF: every remaining PDF would fail the same way, and
+            // the exit code is the agent's routing signal. Stop here and keep what already succeeded.
+            entry.Status = "not-processed";
+            entry.Reason = "license";
+            licenseFailure = perPdfEx;
+            notProcessed.AddRange(pdfPaths.SkipWhile(p => p != pdfPath).Select(p => Path.GetFileName(p)));
+            break;
+        }
         catch (Exception perPdfEx)
         {
             // One bad PDF must not abort the batch — record and continue.
@@ -392,6 +409,7 @@ try
     // The token-free output is always written (even header-only, matching the original contract);
     // token-resolved outputs are written only when something actually changed in them.
     var outputs = new List<object>();
+    var writtenPaths = new List<string>();
     var rowsWrittenTotal = 0;
     var totalRowsAll = 0;
     foreach (var p in pathOrder)
@@ -422,6 +440,7 @@ try
         else
         {
             LedgerIo.WriteAtomic(p, rendered);
+            writtenPaths.Add(Path.GetFullPath(p));
         }
 
         var cols = pathColumnsAdded.TryGetValue(p, out var c) && c.Count > 0 ? c : null;
@@ -435,6 +454,24 @@ try
         });
         rowsWrittenTotal += added;
         totalRowsAll += totalRows;
+    }
+
+    if (licenseFailure is not null)
+    {
+        // The completed rows are on disk (above); now route the licence failure exactly like every
+        // other script does, with the batch position appended so the agent can tell the user what
+        // is done and what is left. stdout stays empty: errors never go there.
+        var completed = entries.Count - 1;
+        var context =
+            $"Processed {completed} of {pdfPaths.Count} PDFs before the licence failure" +
+            (writtenPaths.Count > 0
+                ? $"; rows for the completed PDFs were written to {string.Join(", ", writtenPaths)}"
+                : "; nothing was written") +
+            $". Not processed: {string.Join(", ", notProcessed)}. " +
+            "Once the cause is resolved (a rate-limit window resets within a minute), re-run the same command " +
+            "with --append: PDFs already recorded are skipped, so nothing is duplicated and only the remaining " +
+            "PDFs are executed.";
+        JsonOut.Fail(licenseFailure, context);
     }
 
     var succeeded = entries.Count(e => e.Status == "ok");
@@ -465,7 +502,7 @@ try
     {
         // Partial batch: the ledgers hold the ok rows, but at least one PDF needs attention.
         // Duplicate skips are the append steady state, NOT a problem to surface via exit code.
-        Environment.Exit(2);
+        ScriptHost.Exit(2);
     }
 }
 catch (Exception ex)

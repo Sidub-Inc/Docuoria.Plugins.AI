@@ -52,7 +52,7 @@ try
             var completeness = drySucceeded.Completeness;
             JsonOut.Write(new { kind = result.GetType().Name, result, completeness });
             if (!completeness.IsComplete)
-                Environment.Exit(2);
+                ScriptHost.Exit(2);
         }
         else
         {

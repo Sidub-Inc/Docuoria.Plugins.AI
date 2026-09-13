@@ -98,7 +98,7 @@ try
                     totalSources = (format == "csv" ? csvLedger!.SourceFiles : jsonLedger!.SourceFiles).Count,
                 },
             });
-            Environment.Exit(0); // idempotent no-op is success; the engine never ran
+            ScriptHost.Exit(0); // idempotent no-op is success; the engine never ran
         }
         if (alreadyRecorded && onDuplicate == DuplicateSourcePolicy.Fail)
         {
@@ -201,7 +201,7 @@ try
                 JsonOut.Write(new { status = "ok", format, output = text, completeness });
             }
             if (!completeness.IsComplete)
-                Environment.Exit(2);
+                ScriptHost.Exit(2);
             break;
 
         case RejectedResult rej:
