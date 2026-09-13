@@ -6,13 +6,14 @@ This repository distributes the **Docuoria AI Plugin** (`docuoria`), a skill
 package that enables AI agents to extract structured data from PDFs using
 template-driven pipelines.
 
-**Current version: 1.1.0**
+**Current version: 1.1.3**
 
 ---
 
 ## Quick Start
 
-The easiest way to install the Docuoria AI Plugin is with the CLI:
+The easiest way to install the Docuoria AI Plugin is with the CLI. The skill needs the
+.NET 10 SDK and `dotnet-script` (see [Prerequisites](#prerequisites)).
 
 ```bash
 # npm (Node.js ≥ 20)
@@ -56,7 +57,7 @@ git submodule add https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/s
 ### Pin to a specific version
 
 ```bash
-git clone --branch v1.1.0 --depth 1 \
+git clone --branch v1.1.3 --depth 1 \
   https://github.com/Sidub-Inc/Docuoria.Plugins.AI.git .github/skills/docuoria
 ```
 
@@ -81,7 +82,7 @@ automatically by `dotnet-script` on first run.
 | `SKILL.md` | Skill router — entry point auto-discovered by AI clients |
 | `.claude-plugin/plugin.json` | Claude Code plugin manifest |
 | `references/` | Deep-dive guides: workflow, patterns, classification, diagnostics |
-| `scripts/` | `dotnet-script` CLI surface (15 verb scripts) |
+| `scripts/` | `dotnet-script` CLI surface (19 verb scripts) |
 | `assets/lib/Docuoria.dll` | Bundled SDK assembly |
 | `assets/schemas/template-schema.json` | JSON Schema for template authoring and validation |
 | `examples/` | Five worked end-to-end walkthroughs |
@@ -98,6 +99,22 @@ automatically by `dotnet-script` on first run.
 - **Validate** templates against the JSON Schema
 - **Dry-run** extractions before committing results
 - **Diagnose** failed or rejected extraction results
+
+---
+
+## Template store host
+
+Each release attaches `Docuoria.Api-<version>.zip`, the Azure Functions host of the
+shared template store (Pro plan). Deploy it to a Functions app on the .NET 10
+isolated worker and set the template directory:
+
+```powershell
+az functionapp deployment source config-zip --name <app> --resource-group <rg> --src Docuoria.Api-<version>.zip
+az functionapp config appsettings set --name <app> --resource-group <rg> --settings "TemplateStore__RootPath=D:homesite	emplates"
+az functionapp keys list --name <app> --resource-group <rg>
+```
+
+Point the SDK at the host with `AddApiTemplateStore` and the function key.
 
 ---
 
@@ -119,10 +136,9 @@ foreach ($entry in $manifest.files) {
 
 ## Versioning
 
-This plugin is assembled and published automatically from the
-[Docuoria](https://github.com/Sidub-Inc/Docuoria) source repository using
-[GitVersion](https://gitversion.net/) (Mainline mode). Version tags in this
-repo mirror the source release tags.
+This plugin is assembled and published automatically from the Docuoria source
+repository. Its version tags match the `Docuoria` and `Docuoria.Cli` NuGet
+packages and `@sidub-inc/docuoria.cli` on npm.
 
 See [Releases](https://github.com/Sidub-Inc/Docuoria.Plugins.AI/releases)
 for version history.
@@ -130,7 +146,7 @@ for version history.
 ## License
 
 **This plugin package is MIT** — install and use it freely. The Docuoria SDK
-assembly it bundles (`assets/lib/Docuoria.dll`) is dual-licensed (AGPLv3 or
-proprietary, including a free tier for personal and non-commercial use). See
-[LICENSE.txt](https://github.com/Sidub-Inc/Docuoria/blob/main/LICENSE.txt) in
-the source repository.
+assembly it bundles (`assets/lib/Docuoria.dll`) is licensed under the Sidub
+Proprietary Software License Agreement: free for personal and non-commercial
+use, Pro subscription for commercial use. See the
+[License Agreement](https://docuoria.com/license/).

@@ -1,21 +1,21 @@
 {
   "package": "docuoria",
-  "version": "1.1.0",
-  "builtAt": "2026-09-13T03:13:10.7824468Z",
+  "version": "1.1.3",
+  "builtAt": "2026-09-13T23:38:16.8876172Z",
   "sdk": {
     "assembly": "Docuoria.dll",
-    "fileVersion": "1.1.0.0",
-    "informationalVersion": "1.1.0+Branch.main.Sha.9f11c02a2b260d7e8ac5b1f21ff997048ca60994.9f11c02a2b260d7e8ac5b1f21ff997048ca60994"
+    "fileVersion": "1.1.3.0",
+    "informationalVersion": "1.1.3+Branch.main.Sha.1bbc8162aebe16c187f6d839e5b46eb439b76e39.1bbc8162aebe16c187f6d839e5b46eb439b76e39"
   },
   "files": [
     {
       "path": ".claude-plugin/plugin.json",
-      "sha256": "5bfc9f60e1d2e27779e0e6003c420da85ad88177e80aae82cfcd63b95e8c636d",
+      "sha256": "7d3635c914e073a0e90694494c521e3c8ddc54108a53359f733a5bc86e2b7d42",
       "bytes": 631
     },
     {
       "path": "assets/lib/Docuoria.dll",
-      "sha256": "67c79d055ea862b5b67fe88a66e69d550fb112dbe72ece0041cfdc5926c2549f",
+      "sha256": "83b711d70e2e6479d2b7a1e1e260b96e391105dbf352379b5a6f642e93db8c0b",
       "bytes": 426496
     },
     {
@@ -220,12 +220,12 @@
     },
     {
       "path": "SKILL.md",
-      "sha256": "3f8eb45e51dd96fb6b08a1113b44f95fa528a1ace7f3b6e55a4b2bf95993c2e7",
-      "bytes": 15834
+      "sha256": "a839e8ddb4bcd9aafb4ef6d5e5e853517295c40ea2e4f82b11778a03359b8217",
+      "bytes": 15800
     },
     {
       "path": "skill/assets/lib/Docuoria.dll",
-      "sha256": "67c79d055ea862b5b67fe88a66e69d550fb112dbe72ece0041cfdc5926c2549f",
+      "sha256": "83b711d70e2e6479d2b7a1e1e260b96e391105dbf352379b5a6f642e93db8c0b",
       "bytes": 426496
     },
     {
@@ -405,8 +405,8 @@
     },
     {
       "path": "skill/SKILL.md",
-      "sha256": "3f8eb45e51dd96fb6b08a1113b44f95fa528a1ace7f3b6e55a4b2bf95993c2e7",
-      "bytes": 15834
+      "sha256": "a839e8ddb4bcd9aafb4ef6d5e5e853517295c40ea2e4f82b11778a03359b8217",
+      "bytes": 15800
     }
   ]
 }

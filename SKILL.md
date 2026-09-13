@@ -163,5 +163,5 @@ These are the mistakes that cause silent, hard-to-spot failures.
 - `assets/lib/Docuoria.dll` — bundled SDK assembly.
 - `assets/schemas/template-schema.json` — JSON Schema for template validation.
 
-This directory is scaffolded and updated by the Docuoria CLI (`docuoria init` / `docuoria update`); see `docs/cli.md` in the Docuoria repository for the command reference.
+This directory is scaffolded and updated by the Docuoria CLI (`docuoria init` / `docuoria update`); `docuoria --help` lists its commands.
 
